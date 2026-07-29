@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lunar Tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="app-header">
+      <p class="kicker">Lunar Tracker</p>
+      <div class="header-controls">
+        <select id="profile-select" aria-label="Active profile"></select>
+        <button id="manage-profiles" type="button">Profiles</button>
+        <button id="open-settings" type="button" aria-label="Location and display settings">Settings</button>
+      </div>
+    </header>
+
+    <p id="storage-notice" class="notice" hidden>
+      Browser storage is unavailable — profiles and settings will be kept for
+      this visit only.
+    </p>
+
+    <div id="loading" class="loading">Loading ephemeris…</div>
+
+    <div id="app" hidden>
+      <section class="date-head">
+        <h1 id="date-display">—</h1>
+        <nav class="date-nav" aria-label="Date selection">
+          <button id="prev-day" type="button" aria-label="Previous day">‹</button>
+          <input type="date" id="date-input" aria-label="Select date">
+          <button id="next-day" type="button" aria-label="Next day">›</button>
+          <button id="today-btn" type="button">Today</button>
+        </nav>
+        <div class="mode-toggle" role="group" aria-label="Zodiac mode">
+          <button id="mode-tropical" type="button">Tropical</button>
+          <button id="mode-sidereal" type="button">Sidereal</button>
+        </div>
+      </section>
+
+      <main>
+        <div class="card">
+          <div class="card-top">
+            <div id="moon-icon"></div>
+            <div>
+              <h2 id="phase-name">—</h2>
+              <p id="illum">—</p>
+              <p id="moon-sign">—</p>
+            </div>
+          </div>
+          <dl class="times">
+            <div><dt>Moonrise</dt><dd id="moonrise">—</dd></div>
+            <div><dt>Moonset</dt><dd id="moonset">—</dd></div>
+            <div><dt>Sunrise</dt><dd id="sunrise">—</dd></div>
+            <div><dt>Sunset</dt><dd id="sunset">—</dd></div>
+          </dl>
+          <p class="location-line">
+            <button id="location-label" type="button" title="Change display location">—</button>
+          </p>
+        </div>
+
+        <div id="transits"></div>
+        <div id="affirmations"></div>
+        <div id="readings"></div>
+      </main>
+
+      <footer>
+        Computed in-browser with Swiss Ephemeris · Houses: Placidus ·
+        Place search © OpenStreetMap contributors<br>
+        <!-- AGPL source offer: this link must stay reachable and point at
+             the source of the version currently deployed. -->
+        <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" rel="noopener">Source code</a>
+        (AGPL-3.0)
+      </footer>
+    </div>
+  </div>
+
+  <!-- ── Profile manager ── -->
+  <dialog id="profile-dialog">
+    <div id="profile-list-view">
+      <h2>Natal profiles</h2>
+      <ul id="profile-list"></ul>
+      <div class="dialog-actions">
+        <button id="new-profile" type="button" class="primary">＋ New profile</button>
+        <button id="close-profiles" type="button">Close</button>
+      </div>
+    </div>
+
+    <form id="profile-form" hidden novalidate>
+      <h2 id="profile-form-title">New profile</h2>
+
+      <label for="pf-name">Profile name</label>
+      <input id="pf-name" type="text" required maxlength="60" autocomplete="off">
+
+      <label for="pf-date">Birth date</label>
+      <input id="pf-date" type="date" required min="1800-01-01" max="2399-12-31">
+
+      <label for="pf-time">Birth time</label>
+      <div class="row">
+        <input id="pf-time" type="time">
+        <label class="check"><input id="pf-time-unknown" type="checkbox"> Time unknown</label>
+      </div>
+
+      <label for="pf-place">Birth place</label>
+      <input id="pf-place" type="text" placeholder="Search a city or town…" autocomplete="off">
+      <ul id="pf-place-results" class="place-results" hidden></ul>
+      <p id="pf-place-chosen" class="chosen-place"></p>
+
+      <details id="pf-manual">
+        <summary>Enter coordinates manually</summary>
+        <div class="row">
+          <label>Latitude <input id="pf-lat" type="number" step="any" min="-90" max="90" placeholder="52.267"></label>
+          <label>Longitude <input id="pf-lon" type="number" step="any" min="-180" max="180" placeholder="12.933"></label>
+        </div>
+        <p class="hint">Positive = north/east, negative = south/west.</p>
+      </details>
+
+      <label for="pf-tz">Timezone <span id="pf-tz-auto" class="tag" hidden>auto</span></label>
+      <input id="pf-tz" type="text" list="tz-list" autocomplete="off" placeholder="Europe/Berlin">
+
+      <p id="pf-error" class="form-error" hidden></p>
+
+      <div class="dialog-actions">
+        <button type="submit" class="primary">Save profile</button>
+        <button id="pf-cancel" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ── Display location ── -->
+  <dialog id="settings-dialog">
+    <form id="location-form" novalidate>
+      <h2>Settings</h2>
+      <h3 class="settings-sub">Display location</h3>
+      <p class="hint">Drives moonrise/moonset, sunrise/sunset, and the local
+        calendar day. Your natal chart is unaffected.</p>
+
+      <label for="loc-place">City search</label>
+      <input id="loc-place" type="text" placeholder="Search a city…" autocomplete="off">
+      <ul id="loc-place-results" class="place-results" hidden></ul>
+      <p id="loc-place-chosen" class="chosen-place"></p>
+
+      <details id="loc-manual">
+        <summary>Enter coordinates manually</summary>
+        <div class="row">
+          <label>Latitude <input id="loc-lat" type="number" step="any" min="-90" max="90"></label>
+          <label>Longitude <input id="loc-lon" type="number" step="any" min="-180" max="180"></label>
+        </div>
+      </details>
+
+      <label for="loc-tz">Timezone <span id="loc-tz-auto" class="tag" hidden>auto</span></label>
+      <input id="loc-tz" type="text" list="tz-list" autocomplete="off">
+
+      <h3 class="settings-sub">Display options</h3>
+      <label class="check option-row"><input id="opt-affirmations" type="checkbox">
+        Show New Moon affirmations</label>
+      <p class="hint">Affirmations for the natal house of the most recent New
+        Moon, shown for 28 days. Applies immediately.</p>
+
+      <p id="loc-error" class="form-error" hidden></p>
+
+      <div class="dialog-actions">
+        <button type="submit" class="primary">Save location</button>
+        <button id="loc-cancel" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="tz-list"></datalist>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
