@@ -103,6 +103,27 @@ friends-scale hobby use; if the app ever grows beyond that, switch to a
 commercial geocoder or self-hosted Nominatim. Results are used once at
 profile/location creation — nothing is queried in bulk.
 
+## Deploying to the server (lunar.daxyogatherapy.com)
+
+You never build by hand. Pushing to `main` triggers
+`.github/workflows/build-deploy.yml`, which runs the build and publishes
+source + the built `dist/` to the **`deploy` branch**. The server's timer
+polls that branch every 5 minutes and serves `<release>/dist`.
+
+```
+edit source → commit & push main (GitHub Desktop) → CI builds → deploy branch → server
+```
+
+So `dist/` stays gitignored on `main` (source-only, clean history), and it is
+impossible to ship a stale build — the build always comes from the commit
+being deployed. The server's deploy script tracks `BRANCH="deploy"`.
+
+To deploy immediately instead of waiting for the timer, on the server:
+`sudo -iu deploy /usr/local/bin/deploy-lunar-daxyogatherapy.sh`
+
+After deploying a new version, refresh the public source mirror so the
+AGPL source offer matches what is live (see below): `npm run publish-source`.
+
 ## Repos: private working copy + public source mirror
 
 Day-to-day work happens in the **private** repo
