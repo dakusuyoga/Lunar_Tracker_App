@@ -103,54 +103,20 @@ friends-scale hobby use; if the app ever grows beyond that, switch to a
 commercial geocoder or self-hosted Nominatim. Results are used once at
 profile/location creation — nothing is queried in bulk.
 
-## Deploying to the server (lunar.daxyogatherapy.com)
+## Day-to-day workflow
 
-You never build by hand. Pushing to `main` triggers
-`.github/workflows/build-deploy.yml`, which runs the build and publishes
-source + the built `dist/` to the **`deploy` branch**. The server's timer
-polls that branch every 5 minutes and serves `<release>/dist`.
+Edit source, then commit and push `main` (GitHub Desktop). The
+`.github/workflows/deploy.yml` workflow builds the app and publishes it to
+GitHub Pages automatically — you never run a build by hand, and `dist/` stays
+gitignored, so it is impossible to ship a stale build.
 
 ```
-edit source → commit & push main (GitHub Desktop) → CI builds → deploy branch → server
+edit source → commit & push main → CI builds → GitHub Pages
 ```
 
-So `dist/` stays gitignored on `main` (source-only, clean history), and it is
-impossible to ship a stale build — the build always comes from the commit
-being deployed. The server's deploy script tracks `BRANCH="deploy"`.
-
-To deploy immediately instead of waiting for the timer, on the server:
-`sudo -iu deploy /usr/local/bin/deploy-lunar-daxyogatherapy.sh`
-
-The same CI run also pushes the **public source mirror** before publishing the
-build, so the AGPL source offer can never lag behind what is being served. That
-step needs a `MIRROR_PUSH_TOKEN` repository secret (fine-grained token with
-Contents: Read and write on the mirror); without it the step self-skips and you
-sync by hand with `npm run publish-source`.
-
-## Repos: private working copy + public source mirror
-
-Day-to-day work happens in the **private** repo
-(`dakusuyoga/LunaTrackerApp`, remote name `origin`) — that's what GitHub
-Desktop pushes to, and what the server deploys from. A **public** mirror
-(`dakusuyoga/Lunar_Tracker_App`, remote name `public`) exists purely to
-satisfy the Swiss Ephemeris AGPL source offer, and the app's footer links
-to it.
-
-**Whenever you deploy a new version to the live site, update the mirror**
-so the published source matches what visitors are running:
-
-```sh
-npm run publish-source
-```
-
-That pushes the current `main` to the public mirror — one command, nothing
-else to think about. (GitHub Desktop only pushes to `origin`, so the mirror
-is updated from the terminal.) Development history stays private in between;
-only what you actually ship needs to be mirrored.
-
-If the mirror's URL ever changes, update the footer link in `index.html` —
-it is the source offer, so it must stay reachable and point at the deployed
-version's source.
+The app's footer links to this repository as its AGPL source offer, so the
+repository must stay public and the link must stay reachable. If the repo is
+ever renamed or moved, update that link in `index.html`.
 
 ## Licensing (Swiss Ephemeris — AGPL)
 
@@ -158,16 +124,14 @@ This project uses the Swiss Ephemeris via the `sweph-wasm` package. Swiss
 Ephemeris is licensed under the **AGPL** (or a paid professional license from
 Astrodienst). The app ships the Swiss Ephemeris WebAssembly binary to every
 visitor's browser, so the AGPL's source-availability requirement applies to
-the live site — which is met by the public mirror linked in the app footer
-(see the section above). The project as a whole is licensed
-**AGPL-3.0-or-later**.
+the live site — which is met by this repository being public and linked from
+the app footer. The project as a whole is licensed **AGPL-3.0-or-later**.
 
-Note that this is inherent to a client-side app: every visitor's browser
-downloads the whole app, including all interpretive content, so that text is
-readable via browser dev tools regardless of repo visibility or license. The
-private repo keeps development history and unreleased drafts private, not the
-shipped content. Making content unreadable would require a backend that
-serves only the current day's text — see the future phase below.
+Note that content exposure is inherent to a client-side app: every visitor's
+browser downloads the whole app, including all interpretive content, so that
+text is readable via browser dev tools regardless of licence. Making content
+unreadable would require a backend that serves only the current day's text —
+see the future phase below.
 
 If you ever want to go closed-source or commercial, obtain a Swiss Ephemeris
 professional license from Astrodienst instead.

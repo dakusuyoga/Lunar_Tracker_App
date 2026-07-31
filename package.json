@@ -8,8 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "publish-source": "git push public main"
+    "preview": "vite preview"
   },
   "dependencies": {
     "luxon": "^3.5.0",

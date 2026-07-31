@@ -18,10 +18,6 @@ concurrency:
 
 jobs:
   build:
-    # Only the public mirror hosts a GitHub Pages site. In the private
-    # working repo (which deploys to its own server) Pages isn't enabled,
-    # so this workflow would fail on configure-pages with a 404.
-    if: github.repository == 'dakusuyoga/Lunar_Tracker_App'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +34,6 @@ jobs:
 
   deploy:
     needs: build
-    if: github.repository == 'dakusuyoga/Lunar_Tracker_App'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
