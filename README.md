@@ -118,6 +118,32 @@ The app's footer links to this repository as its AGPL source offer, so the
 repository must stay public and the link must stay reachable. If the repo is
 ever renamed or moved, update that link in `index.html`.
 
+## Custom domain
+
+The site is served at **https://lunar.daxyogatherapy.com**. Two things make
+that work, and both must stay in place:
+
+1. **`public/CNAME`** — contains the bare hostname. Vite copies `public/`
+   verbatim into `dist/`, so every build republishes it. A `CNAME` at the repo
+   root would *not* work: only what lands in `dist/` is served.
+2. **Repo → Settings → Pages → Custom domain** — the durable setting, which is
+   what survives Actions-based deploys. Keep "Enforce HTTPS" enabled.
+
+DNS lives in Cloudflare: `lunar` **CNAME → dakusuyoga.github.io**, **DNS only
+(grey cloud)**. Grey is deliberate — GitHub Pages has no origin IP to hide, and
+proxying can interfere with GitHub provisioning its TLS certificate. Only
+consider the orange cloud after the certificate is confirmed working.
+
+`base: "./"` in `vite.config.js` is what lets the same build work both at a
+domain root and under the `/Lunar_Tracker_App/` GitHub Pages sub-path. **Don't
+change it to `/`** unless the sub-path URL is being abandoned.
+
+Note that setting a custom domain makes the old
+`dakusuyoga.github.io/Lunar_Tracker_App/` URL **redirect** to it. Since
+`localStorage` is per-origin, profiles saved under the old address do not carry
+over — everyone re-enters their birth details once. (Accounts, when they land,
+end that problem for good.)
+
 ## Licensing (Swiss Ephemeris — AGPL)
 
 This project uses the Swiss Ephemeris via the `sweph-wasm` package. Swiss
