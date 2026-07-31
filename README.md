@@ -121,8 +121,11 @@ being deployed. The server's deploy script tracks `BRANCH="deploy"`.
 To deploy immediately instead of waiting for the timer, on the server:
 `sudo -iu deploy /usr/local/bin/deploy-lunar-daxyogatherapy.sh`
 
-After deploying a new version, refresh the public source mirror so the
-AGPL source offer matches what is live (see below): `npm run publish-source`.
+The same CI run also pushes the **public source mirror** before publishing the
+build, so the AGPL source offer can never lag behind what is being served. That
+step needs a `MIRROR_PUSH_TOKEN` repository secret (fine-grained token with
+Contents: Read and write on the mirror); without it the step self-skips and you
+sync by hand with `npm run publish-source`.
 
 ## Repos: private working copy + public source mirror
 

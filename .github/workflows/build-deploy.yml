@@ -27,7 +27,11 @@ jobs:
     if: github.repository == 'dakusuyoga/LunarTrackerApp'
     runs-on: ubuntu-latest
     steps:
+      # Full history: pushing to the mirror from a shallow clone is rejected
+      # ("shallow update not allowed").
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -48,6 +52,19 @@ jobs:
           test -f dist/ephe/semo_18.se1
           test -f dist/ephe/seas_18.se1
           echo "build output verified"
+
+      # AGPL: the public source mirror is this app's source offer (linked in the
+      # footer), so it must never lag behind what is being served. Pushed BEFORE
+      # the deploy branch, so the source is public no later than the build the
+      # server can pick up. Needs a MIRROR_PUSH_TOKEN secret with write access
+      # to the mirror; if it is absent the step is skipped and you fall back to
+      # running `npm run publish-source` by hand.
+      - name: Sync public source mirror
+        if: ${{ secrets.MIRROR_PUSH_TOKEN != '' }}
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+        run: |
+          git push "https://x-access-token:${MIRROR_TOKEN}@github.com/dakusuyoga/Lunar_Tracker_App.git" HEAD:main
 
       - name: Publish to deploy branch
         run: |
