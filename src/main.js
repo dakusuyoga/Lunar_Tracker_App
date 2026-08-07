@@ -88,8 +88,99 @@ function ritualContent(ritual) {
   return out.join("");
 }
 
-function section(title, body) {
-  return `<details class="entry"><summary><h3>${title}</h3><span class="disclose" aria-hidden="true">＋</span></summary><div class="entry-body">${body}</div></details>`;
+/* `kind` is a stable identity for the panel (e.g. "sign", "house") so an
+   open panel stays open across re-renders — including the minute-by-minute
+   refresh on today, and the moment a reading is replaced at an ingress. */
+function section(title, body, kind) {
+  const k = kind ? ` data-kind="${kind}"` : "";
+  return `<details class="entry"${k}><summary><h3>${title}</h3><span class="disclose" aria-hidden="true">＋</span></summary><div class="entry-body">${body}</div></details>`;
+}
+
+/* The sign line, in three forms:
+     today, change still ahead → "♉ Moon in Taurus · 27°10′ · tropical → Gemini from 4:12 pm"
+     today, change already past → "♊ Moon in Gemini · 0°15′ · tropical · since 4:12 pm"
+     past / future             → "♉ Taurus until 4:12 pm · ♊ Gemini after · tropical" */
+function signLine(day) {
+  const idx = day.moonSignIndex;
+  const plain = `${SIGN_GLYPHS[idx]} Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${state.zodiacMode}`;
+  const segs = day.signSegments;
+  if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
+
+  if (!day.isToday) {
+    const span = segs.map((s, i) =>
+      i === segs.length - 1
+        ? `${SIGN_GLYPHS[s.value]} ${SIGNS[s.value]} after`
+        : `${SIGN_GLYPHS[s.value]} ${SIGNS[s.value]} until ${fmtTime(s.to)}`
+    ).join(" · ");
+    return `${esc(span)} · ${esc(state.zodiacMode)}`;
+  }
+
+  const active = activeSegment(segs, day.anchor);
+  const i = segs.indexOf(active);
+  const next = segs[i + 1];
+  const note = next
+    ? `→ ${SIGN_GLYPHS[next.value]} ${SIGNS[next.value]} from ${fmtTime(next.from)}`
+    : `since ${fmtTime(active.from)}`;
+  return `${esc(plain)} <span class="ingress">${esc(note)}</span>`;
+}
+
+/* The same treatment for the natal-house line under the moon card. Built
+   from the segments rather than appended to the anchor's house — on a past
+   or future day the anchor sits in one segment while the line has to name
+   the house the day *starts* in. */
+function houseLine(day) {
+  const segs = day.houseSegments;
+  const plain = `Moon transiting the ${ORDINALS[day.house]} house`;
+  if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
+
+  if (!day.isToday) {
+    const span = segs.map((s, i) =>
+      i === segs.length - 1
+        ? `${ORDINALS[s.value]} after`
+        : `${ORDINALS[s.value]} until ${fmtTime(s.to)}`
+    ).join(" · ");
+    return esc(`Moon transiting the ${span}`);
+  }
+
+  const active = activeSegment(segs, day.anchor);
+  const next = segs[segs.indexOf(active) + 1];
+  const note = next
+    ? `→ ${ORDINALS[next.value]} from ${fmtTime(next.from)}`
+    : `since ${fmtTime(active.from)}`;
+  return `${esc(`Moon transiting the ${ORDINALS[active.value]} house`)} <span class="ingress">${esc(note)}</span>`;
+}
+
+/* The active segment is the one containing the anchor; on past/future dates
+   the anchor is noon, which is still a segment of that day. */
+function activeSegment(segments, anchor) {
+  const t = anchor.getTime();
+  return segments.find((s) => t >= s.from.getTime() && t < s.to.getTime())
+    || segments[segments.length - 1];
+}
+
+// "until 4:12 pm" / "from 4:12 pm" / "4:12 pm – 9:30 pm" — a qualifier on a
+// panel title, only meaningful when a day has more than one segment.
+function segmentRange(segments, i) {
+  if (segments.length < 2 || state.showTransitions === false) return "";
+  if (i === 0) return `until ${fmtTime(segments[0].to)}`;
+  if (i === segments.length - 1) return `from ${fmtTime(segments[i].from)}`;
+  return `${fmtTime(segments[i].from)} – ${fmtTime(segments[i].to)}`;
+}
+
+/* Which segments get a reading panel:
+   today → the active one, plus the others only if the user asked for them;
+   past/future → all of them, since there is no "now" to choose between. */
+function segmentsToRender(segments, day) {
+  if (!segments) return [];
+  const all = segments.map((seg, i) => ({ seg, i }));
+  if (!day.isToday || state.showBothReadings) {
+    const active = activeSegment(segments, day.anchor);
+    // Active first, the rest in time order beneath it.
+    return day.isToday ? [...all].sort((a, b) =>
+      (a.seg === active ? -1 : 0) - (b.seg === active ? -1 : 0)) : all;
+  }
+  const active = activeSegment(segments, day.anchor);
+  return all.filter(({ seg }) => seg === active);
 }
 
 /* ── Rendering ──────────────────────────────────────────────────── */
@@ -120,8 +211,7 @@ function render() {
   }
   $("phase-name").innerHTML = phaseLabel;
   $("illum").textContent = `${(day.illum * 100).toFixed(0)}% illuminated`;
-  $("moon-sign").textContent =
-    `${SIGN_GLYPHS[day.moonSignIndex]} Moon in ${SIGNS[day.moonSignIndex]} · ${degInSign(day.moonLon)} · ${state.zodiacMode}`;
+  $("moon-sign").innerHTML = signLine(day);
   $("moonrise").textContent = fmtTime(day.moonTimes.rise);
   $("moonset").textContent = fmtTime(day.moonTimes.set);
   $("sunrise").textContent = fmtTime(day.sunTimes.rise);
@@ -137,7 +227,7 @@ function render() {
     transit = `<p class="transit-note">This profile's birth data could not be interpreted (${esc(natal.reason)}). Edit the profile to fix it.</p>`;
   } else {
     if (day.house != null) {
-      transit += `<p class="transit-house">Moon transiting the ${ORDINALS[day.house]} house</p>`;
+      transit += `<p class="transit-house">${houseLine(day)}</p>`;
     }
     if (day.conjunctions.length) {
       transit += day.conjunctions.map((c) =>
@@ -182,11 +272,26 @@ function render() {
   // Interpretive readings
   const withHouses = natal && !natal.invalid && natal.cusps;
   const parts = [];
-  parts.push(section(`Moon in ${SIGNS[day.moonSignIndex]}`,
-    contentOr(CONTENT.dailyMoonInSign[signKey(day.moonLon)])));
-  if (withHouses && day.house != null) {
-    parts.push(section(`Moon in your ${ORDINALS[day.house]} house`,
-      contentOr(CONTENT.dailyMoonInHouse[day.house])));
+  /* One reading per segment of the day. On today that is just the sign the
+     Moon is in right now — the panel is replaced when it moves on. Other
+     dates have no "now", so every sign the day covers is shown, each tagged
+     with the stretch it applies to. */
+  const qualify = (title, range) =>
+    range ? `${title} <span class="seg-range">${esc(range)}</span>` : title;
+
+  for (const { seg, i } of segmentsToRender(day.signSegments, day)) {
+    parts.push(section(
+      qualify(`Moon in ${SIGNS[seg.value]}`, segmentRange(day.signSegments, i)),
+      contentOr(CONTENT.dailyMoonInSign[SIGNS[seg.value].toLowerCase()]),
+      `sign-${i}`));
+  }
+  if (withHouses && day.houseSegments) {
+    for (const { seg, i } of segmentsToRender(day.houseSegments, day)) {
+      parts.push(section(
+        qualify(`Moon in your ${ORDINALS[seg.value]} house`, segmentRange(day.houseSegments, i)),
+        contentOr(CONTENT.dailyMoonInHouse[seg.value]),
+        `house-${i}`));
+    }
   }
   if (day.newMoonWindow) {
     const w = day.newMoonWindow;
@@ -221,12 +326,46 @@ function render() {
     parts.push(section(`Waning Quarter Moon in ${esc(day.lastQuarter.sign)}`,
       contentOr(CONTENT.lastQuarterInSign[day.lastQuarter.signKey])));
   }
+  /* Re-rendering rebuilds these panels, so carry the open ones across.
+     Keying on `data-kind` rather than the title means an expanded reading
+     stays expanded when an ingress replaces it with the next sign. */
+  const wasOpen = new Set(
+    [...$("readings").querySelectorAll("details[open]")].map((d) => d.dataset.kind)
+  );
   $("readings").innerHTML = parts.join('<hr class="rule">');
+  for (const d of $("readings").querySelectorAll("details")) {
+    if (wasOpen.has(d.dataset.kind)) d.open = true;
+  }
 
   // Header state
   renderProfileSelect();
   $("mode-tropical").classList.toggle("active", state.zodiacMode === "tropical");
   $("mode-sidereal").classList.toggle("active", state.zodiacMode === "sidereal");
+}
+
+/* Today's view is read at the current moment, so it goes stale on its own:
+   the Moon moves ~0.55°/hour and can change sign or house mid-session.
+   Re-render each minute, and again whenever the tab is brought back — a
+   screen left open overnight would otherwise still be showing yesterday. */
+function startLiveClock() {
+  let lastToday = todayISO();
+  const tick = () => {
+    const now = todayISO();
+    if (now !== lastToday) {
+      // Midnight passed. A screen sitting on "today" should follow the date
+      // over rather than quietly become a stale yesterday.
+      if (selectedDate === lastToday) selectedDate = now;
+      lastToday = now;
+      render();
+      return;
+    }
+    if (selectedDate === now) render();
+  };
+  setInterval(tick, 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) tick();
+  });
+  window.addEventListener("focus", tick);
 }
 
 function renderProfileSelect() {
@@ -431,6 +570,8 @@ function openLocationForm() {
   $("loc-tz-auto").hidden = true;
   $("loc-error").hidden = true;
   $("opt-affirmations").checked = state.showAffirmations !== false;
+  $("opt-transitions").checked = state.showTransitions !== false;
+  $("opt-both-readings").checked = state.showBothReadings === true;
   settingsDialog.showModal();
 }
 
@@ -568,6 +709,16 @@ function wire() {
     persist();
     render();
   });
+  $("opt-transitions").addEventListener("change", (e) => {
+    state.showTransitions = e.target.checked;
+    persist();
+    render();
+  });
+  $("opt-both-readings").addEventListener("change", (e) => {
+    state.showBothReadings = e.target.checked;
+    persist();
+    render();
+  });
 
   // Timezone datalist (searchable dropdown of IANA names)
   const dl = $("tz-list");
@@ -616,6 +767,7 @@ function wire() {
   loading.hidden = true;
   $("app").hidden = false;
   render();
+  startLiveClock();
 
   // After a successful boot, cache the heavy engine assets on-device so
   // later visits don't depend on the connection (see public/sw.js).

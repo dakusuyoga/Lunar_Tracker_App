@@ -370,6 +370,25 @@ body {
 }
 .reading-h .mark { color: var(--ink-soft); }
 
+/* ── Sign / house transitions ── */
+
+/* Secondary to the sign itself: it qualifies the reading, never competes. */
+.ingress {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Time range on a reading panel's title ("until 4:12 pm"). */
+.seg-range {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
 /* ── Rituals ── */
 
 .ritual-h {

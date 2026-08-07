@@ -51,6 +51,41 @@ birth data somewhere safe. If `localStorage` is unavailable (e.g. some
 private-browsing modes), the app keeps working for the visit and shows a
 small notice.
 
+## The daily view is live
+
+The Moon moves ~0.55°/hour and changes sign and natal house about every
+2.3 days, so **roughly 44% of days contain a transition**. Reading the sky at
+one fixed hour would misreport it for much of the day — someone opening the
+app at 8pm would be told the sign it held at breakfast.
+
+So **today is anchored to the current moment**, and the view re-renders every
+minute and whenever the tab regains focus (`startLiveClock` in `main.js`; it
+also rolls the date over at midnight). Past and future dates have no "now", so
+they are anchored to local noon, and the day's detail lives in the segments.
+
+`computeDay` returns `signSegments` and `houseSegments` — the stretches of the
+local day over which the sign, or the natal house, stays constant. They are
+found by sampling hourly and bisecting each crossing to the second. Houses can
+change more than once in a day, since Placidus houses are unequal.
+
+On screen:
+
+* **Today** shows the sign and house the Moon is in *right now*; the reading
+  panel is replaced when it moves on. The line notes the change
+  (`→ Gemini from 4:12 pm`, or `since 4:12 pm` once past).
+* **Past / future dates** show the span — every sign and house the day covers,
+  each panel tagged with the stretch it applies to.
+* Open panels survive a re-render: `section()` tags each with a stable
+  `data-kind`, so an expanded reading stays expanded even when an ingress
+  swaps it for the next sign.
+* Two Settings toggles: **Show transition times** (default on) and **Show both
+  readings on transition days** (default off — today shows only the active
+  reading unless you ask for both).
+
+Sidereal mode has its own ingress times: the ayanāṁśa offset puts the sidereal
+boundary at a different clock time — usually a different day — from the
+tropical one. That is correct, not a bug.
+
 ## Pasting interpretive content
 
 All interpretive text lives in [`src/content.js`](src/content.js) in the

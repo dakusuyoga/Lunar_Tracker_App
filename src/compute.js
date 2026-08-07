@@ -138,6 +138,45 @@ const HOUR_MS = 3600 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 export const AFFIRMATION_DAYS = 28;
 
+/* Split a local day into the stretches over which `bucket(moonLongitude)`
+   stays constant — used for sign and natal-house segments.
+
+   The Moon covers ~13.2°/day, so it changes sign (30° wide) on roughly 44%
+   of days; Placidus houses can be much narrower than 30°, so more than one
+   house crossing in a day is possible. Sampling hourly catches every
+   change, then a bisection pins each crossing to the second. Returns at
+   least one segment, ordered in time. */
+function segmentsOf(dayStart, dayEnd, lonAt, bucket) {
+  const startMs = dayStart.getTime();
+  const endMs = dayEnd.getTime();
+  const at = (ms) => bucket(lonAt(new Date(ms)));
+
+  const segs = [];
+  let segStart = startMs;
+  let cur = at(startMs);
+  let prevMs = startMs;
+
+  for (let ms = startMs + HOUR_MS; ms <= endMs; ms += HOUR_MS) {
+    const b = at(ms);
+    if (b !== cur) {
+      let lo = prevMs, hi = ms;              // lo is inside `cur`, hi is past it
+      while (hi - lo > 1000) {
+        const mid = Math.round((lo + hi) / 2);
+        if (at(mid) === cur) lo = mid; else hi = mid;
+      }
+      segs.push({ from: new Date(segStart), to: new Date(hi), value: cur });
+      segStart = hi;
+      cur = b;
+    }
+    prevMs = ms;
+  }
+  segs.push({ from: new Date(segStart), to: new Date(endMs), value: cur });
+
+  // A crossing landing exactly on midnight can leave a sliver; drop those.
+  const kept = segs.filter((s) => s.to - s.from > 1000);
+  return kept.length ? kept : [segs[segs.length - 1]];
+}
+
 function phaseName(angle) {
   if (angle < 90) return "Waxing Crescent";
   if (angle < 180) return "Waxing Gibbous";
@@ -157,19 +196,37 @@ export function computeDay(dateISO, location, natal, mode) {
   const dayEnd = dayEndDT.toJSDate();
   const noon = noonDT.toJSDate();
 
-  const jdNoon = jdFromDate(noon);
-  const ayNoon = lahiriAyanamsa(jdNoon);
+  /* The Moon moves ~0.55°/hour, changing sign and natal house about every
+     2.3 days — so a fixed hour would misreport the sky for much of the day.
+     On today the anchor is the current moment, and the view re-renders as
+     it moves. Other dates have no "now": noon is the representative
+     instant, and `signSegments`/`houseSegments` carry the day's detail. */
+  const isToday = dateISO === DateTime.now().setZone(zone).toISODate();
+  const anchor = isToday ? new Date() : noon;
 
-  const moonTrop = calcLon(jdNoon, "Moon").lon;
-  const phaseAngle = moonSunElongation(jdNoon);
-  const illum = moonIllumination(jdNoon);
-  const moonLon = modal(moonTrop, ayNoon, mode);
+  const jdAnchor = jdFromDate(anchor);
+  const ayAnchor = lahiriAyanamsa(jdAnchor);
+
+  const moonTrop = calcLon(jdAnchor, "Moon").lon;
+  const phaseAngle = moonSunElongation(jdAnchor);
+  const illum = moonIllumination(jdAnchor);
+  const moonLon = modal(moonTrop, ayAnchor, mode);
 
   const moonTimes = riseSetTimes("Moon", dayStart, dayEnd, location.latitude, location.longitude);
   const sunTimes = riseSetTimes("Sun", dayStart, dayEnd, location.latitude, location.longitude);
 
   const cusps = natal && !natal.invalid ? modalCusps(natal, mode) : null;
   const house = cusps ? houseOf(moonLon, cusps) : null;
+
+  // Where the Moon changes sign / natal house during this local day.
+  const moonLonAt = (date) => {
+    const jd = jdFromDate(date);
+    return modal(calcLon(jd, "Moon").lon, lahiriAyanamsa(jd), mode);
+  };
+  const signSegments = segmentsOf(dayStart, dayEnd, moonLonAt, signIndex);
+  const houseSegments = cusps
+    ? segmentsOf(dayStart, dayEnd, moonLonAt, (lon) => houseOf(lon, cusps))
+    : null;
 
   /* New/full moon ±12h window: show the event's text when this local day
      overlaps [exact instant − 12h, exact instant + 12h]. The window is
@@ -216,10 +273,9 @@ export function computeDay(dateISO, location, natal, mode) {
      today the actual clock time decides (the quotes switch over at the
      exact instant); for other dates, local noon. House-keyed, so they need
      a birth time (cusps). */
-  const isToday = dateISO === DateTime.now().setZone(zone).toISODate();
   let affirmations = null;
   if (cusps) {
-    const ref = isToday ? new Date() : noon;
+    const ref = anchor;
     // Most recent New Moon at or before ref: a 31-day window holds one or
     // two of them (synodic month ≈ 29.53 d) — keep the later one.
     let nm = searchPhaseEvent(0, new Date(ref.getTime() - 31 * DAY_MS), ref);
@@ -257,11 +313,11 @@ export function computeDay(dateISO, location, natal, mode) {
   }
 
   return {
-    dateISO, noonDT,
+    dateISO, noonDT, anchor,
     phaseAngle, illum, phase,
     moonLon, moonSignIndex: signIndex(moonLon),
     moonTimes, sunTimes,
-    house,
+    house, signSegments, houseSegments,
     newMoonWindow, fullMoonWindow, firstQuarter, lastQuarter,
     eclipse,
     conjunctions,

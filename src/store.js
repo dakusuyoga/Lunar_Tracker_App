@@ -22,6 +22,8 @@ function defaults() {
     location: { ...DEFAULT_LOCATION },
     zodiacMode: "tropical",
     showAffirmations: true,
+    showTransitions: true,
+    showBothReadings: false,
   };
 }
 
