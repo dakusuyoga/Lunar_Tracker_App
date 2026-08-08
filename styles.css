@@ -393,6 +393,28 @@ body {
 }
 .about a:hover { color: var(--accent); }
 
+/* ── Phase events ── */
+
+/* When the New/Full/Quarter Moon is exact, and what an eclipse looks like
+   from the display location. */
+.event-exact {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  margin-top: 0.15rem;
+}
+
+.next-events {
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 1rem;
+}
+.next-events:empty { display: none; }
+
 /* ── Sign / house transitions ── */
 
 /* Secondary to the sign itself: it qualifies the reading, never competes. */
@@ -424,6 +446,22 @@ body {
   margin-bottom: 0.5rem;
 }
 .ritual-h:first-child { margin-top: 0; }
+
+/* When the event is exact — and, for the New Moon, when wishes start
+   counting. Sits above the steps so the timing is read before the ritual. */
+.ritual-timing {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.ritual-timing.standalone {
+  text-align: center;
+  color: var(--ink-soft);
+  margin: 0;
+  padding: 0.9rem 0;
+}
 
 .ritual-step {
   display: flex;

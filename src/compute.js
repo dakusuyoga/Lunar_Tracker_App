@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 import {
   norm360, wrap180, jdFromDate,
   calcLon, calcHouses, lahiriAyanamsa, moonIllumination,
-  moonSunElongation, riseSetTimes, searchPhaseEvent,
+  moonSunElongation, riseSetTimes, searchPhaseEvent, eclipseLocal,
 } from "./ephemeris.js";
 import { ECLIPSES } from "./eclipses.js";
 
@@ -138,6 +138,17 @@ const HOUR_MS = 3600 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 export const AFFIRMATION_DAYS = 28;
 
+/* How long the New Moon wishing window stays open after the exact instant.
+
+   This is deliberately ASYMMETRIC, unlike the ±12h window the sign and
+   house readings use. Those describe how a lunation feels, which is
+   genuinely symmetric around the moment. Wishing is not: in the tradition
+   this ritual comes from, wishes made *before* the exact New Moon don't
+   count — the window opens at the instant and runs forward. A symmetric
+   window would put the twelve steps in front of someone the evening
+   before, and they'd do it too early by the method's own terms. */
+export const NEW_MOON_WISHING_HOURS = 24;
+
 /* Split a local day into the stretches over which `bucket(moonLongitude)`
    stays constant — used for sign and natal-house segments.
 
@@ -175,6 +186,29 @@ function segmentsOf(dayStart, dayEnd, lonAt, bucket) {
   // A crossing landing exactly on midnight can leave a sliver; drop those.
   const kept = segs.filter((s) => s.to - s.from > 1000);
   return kept.length ? kept : [segs[segs.length - 1]];
+}
+
+/* Next New and Full Moon after a given instant.
+
+   A 40-day window always contains one of each (synodic month ≈ 29.53 d).
+   The search steps in quarter-days, so it is a few hundred ephemeris calls
+   — too much to repeat on every minute-tick, and the answer only changes
+   when an event actually passes. Hence the cache. */
+let nextEventCache = null;
+function nextPhaseEvents(anchor) {
+  if (nextEventCache
+      && anchor >= nextEventCache.from
+      && (!nextEventCache.newMoon || anchor < nextEventCache.newMoon)
+      && (!nextEventCache.fullMoon || anchor < nextEventCache.fullMoon)) {
+    return nextEventCache;
+  }
+  const to = new Date(anchor.getTime() + 40 * DAY_MS);
+  nextEventCache = {
+    from: anchor,
+    newMoon: searchPhaseEvent(0, anchor, to),
+    fullMoon: searchPhaseEvent(180, anchor, to),
+  };
+  return nextEventCache;
 }
 
 function phaseName(angle) {
@@ -251,6 +285,26 @@ export function computeDay(dateISO, location, natal, mode) {
   const newMoonWindow = windowEvent(0);
   const fullMoonWindow = windowEvent(180);
 
+  /* The wishing window: open only from the exact New Moon forward (see
+     NEW_MOON_WISHING_HOURS). Today only — a ritual is something you *do*,
+     so there is nothing to offer on a day already gone or not yet arrived.
+     Because today is live-anchored, the window opens by itself the minute
+     the New Moon becomes exact. */
+  const wishingOpened = isToday
+    ? searchPhaseEvent(
+        0, new Date(anchor.getTime() - NEW_MOON_WISHING_HOURS * HOUR_MS), anchor)
+    : null;
+  const wishingWindow = wishingOpened
+    ? { instant: wishingOpened,
+        closes: new Date(wishingOpened.getTime() + NEW_MOON_WISHING_HOURS * HOUR_MS) }
+    : null;
+  // The New Moon is later today: say when the window opens rather than
+  // letting the ritual simply be absent.
+  const wishingOpensAt =
+    isToday && !wishingWindow && newMoonWindow && newMoonWindow.instant > anchor
+      ? newMoonWindow.instant
+      : null;
+
   // Quarter texts use the exact local calendar day (no ±12h window).
   const quarterEvent = (targetAngle) => {
     const instant = searchPhaseEvent(targetAngle, dayStart, dayEnd);
@@ -290,10 +344,22 @@ export function computeDay(dateISO, location, natal, mode) {
     }
   }
 
-  // Eclipse whose instant falls on this local calendar date.
-  const eclipse = ECLIPSES.find(
+  /* Eclipse whose instant falls on this local calendar date. The catalogued
+     type is global; `local` says what it looks like from the display
+     location — which is often "nothing at all". */
+  const eclipseRow = ECLIPSES.find(
     (e) => DateTime.fromISO(e.utc, { zone }).toISODate() === dateISO
   ) || null;
+  const eclipse = eclipseRow
+    ? {
+        ...eclipseRow,
+        instant: new Date(eclipseRow.utc),
+        local: eclipseLocal(
+          eclipseRow.kind, new Date(eclipseRow.utc),
+          location.latitude, location.longitude
+        ),
+      }
+    : null;
 
   // Transiting Moon → natal conjunctions (conjunctions only, 5° orb, noon).
   let conjunctions = null;
@@ -319,8 +385,10 @@ export function computeDay(dateISO, location, natal, mode) {
     moonTimes, sunTimes,
     house, signSegments, houseSegments,
     newMoonWindow, fullMoonWindow, firstQuarter, lastQuarter,
+    wishingWindow, wishingOpensAt,
     eclipse,
     conjunctions,
     affirmations, isToday,
+    nextEvents: nextPhaseEvents(anchor),
   };
 }

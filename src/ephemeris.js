@@ -104,6 +104,61 @@ export function riseSetTimes(body, fromDate, toDate, latitude, longitude) {
 /* Instant when the Sun→Moon elongation reaches targetAngle (0, 90, 180,
    270) inside [fromDate, toDate), or null. Windows in this app are ≤ 2
    days, so at most one event can occur (synodic month ≈ 29.5 d). */
+/* Local circumstances of an eclipse, from the display location.
+
+   This matters because the catalogued *type* is global: an eclipse listed
+   as "total" may be a small partial, or entirely invisible, from where the
+   user is standing. Saying "Total Solar Eclipse" to someone who will see
+   nothing is worse than saying nothing.
+
+   Lunar eclipses reach greatest eclipse at the same instant everywhere, so
+   `_how` at the catalogued instant is exactly right; visibility is simply
+   whether the Moon is above the horizon. Solar eclipses peak at different
+   times in different places, so the local search is needed to get the
+   local maximum rather than the global one. */
+export function eclipseLocal(kind, instant, latitude, longitude) {
+  const geo = [longitude, latitude, 0];
+  const jd = jdFromDate(instant);
+  try {
+    if (kind === "lunar") {
+      // Returns a bare array of 11 attributes — note the published types
+      // claim an object with `.data`; the binding does not do that.
+      // [0] umbral magnitude · [1] penumbral · [5] true altitude of the Moon
+      const d = swe.swe_lun_eclipse_how(jd, swe.SEFLG_SWIEPH, geo);
+      if (!Array.isArray(d) || d.length < 7) return null;
+      return {
+        localInstant: instant,          // greatest eclipse: the same moment worldwide
+        altitude: d[5],
+        umbralMag: d[0],
+        penumbralMag: d[1],
+        visible: d[5] > 0,              // if the Moon is up, you can see it
+      };
+    }
+    // Solar: search from a day before, then confirm it found *this* eclipse.
+    const r = swe.swe_sol_eclipse_when_loc(jd - 1, swe.SEFLG_SWIEPH, geo, false);
+    const times = r && r.eclipseContactTimes;
+    const attr = r && r.eclipseAttributes;
+    if (!times || !attr) return null;
+    const maxJd = times[0];
+    if (Math.abs(maxJd - jd) > 1) {
+      // The next locally-visible eclipse is a different one entirely.
+      return { localInstant: null, visible: false, obscuration: 0, altitude: null };
+    }
+    return {
+      localInstant: jdToDate(maxJd),
+      altitude: attr[5],
+      obscuration: attr[2],           // fraction of the solar disc covered
+      magnitude: attr[0],
+      visible: attr[5] > 0 && attr[2] > 0.001,
+    };
+  } catch (err) {
+    // Never let a garnish break the page — but say so, rather than
+    // silently degrading to "not visible", which reads as a fact.
+    console.warn("eclipseLocal failed", err);
+    return null;
+  }
+}
+
 export function searchPhaseEvent(targetAngle, fromDate, toDate) {
   const f = (jd) => {
     let d = moonSunElongation(jd) - targetAngle;

@@ -96,6 +96,57 @@ function section(title, body, kind) {
   return `<details class="entry"${k}><summary><h3>${title}</h3><span class="disclose" aria-hidden="true">＋</span></summary><div class="entry-body">${body}</div></details>`;
 }
 
+const fmtDay = (date) =>
+  DateTime.fromJSDate(date).setZone(state.location.timezone).toFormat("LLL d");
+
+/* The moment a phase event is exact, and — for eclipses — what it actually
+   looks like from here. The catalogued eclipse type is global: telling
+   someone in Toronto "Total Solar Eclipse" when the Sun is below their
+   horizon is worse than telling them nothing. */
+function eventExactLine(day) {
+  if (day.eclipse) {
+    const e = day.eclipse;
+    const loc = e.local;
+    const where = state.location.displayName;
+    if (!loc || !loc.visible) {
+      const why = loc && loc.altitude != null && loc.altitude <= 0
+        ? e.kind === "solar" ? " — the Sun is below the horizon" : " — the Moon is below the horizon"
+        : "";
+      return `Greatest eclipse ${fmtTime(e.instant)} · not visible from ${where}${why}`;
+    }
+    const when = fmtTime(loc.localInstant || e.instant);
+    if (e.kind === "solar") {
+      const pct = Math.round(loc.obscuration * 100);
+      return `Maximum ${when} · ${pct}% of the Sun covered from ${where}`;
+    }
+    const um = loc.umbralMag;
+    const how = um >= 1 ? "the Moon fully in shadow"
+      : um > 0 ? `${Math.round(um * 100)}% of the Moon in shadow`
+      : "penumbral only — a faint shading";
+    return `Greatest ${when} · ${how}, visible from ${where}`;
+  }
+
+  const ev =
+    (day.newMoonWindow && day.newMoonWindow.onThisDay && day.newMoonWindow) ||
+    (day.fullMoonWindow && day.fullMoonWindow.onThisDay && day.fullMoonWindow) ||
+    day.firstQuarter || day.lastQuarter;
+  return ev ? `Exact at ${fmtTime(ev.instant)}` : "";
+}
+
+/* What the phase does next. On a moon app this is the question people
+   actually arrive with, and until now nothing on the page answered it. */
+function nextEventsLine(day) {
+  const n = day.nextEvents;
+  if (!n) return "";
+  const bits = [];
+  if (n.newMoon) bits.push(`New Moon ${fmtDay(n.newMoon)}`);
+  if (n.fullMoon) bits.push(`Full Moon ${fmtDay(n.fullMoon)}`);
+  if (!bits.length) return "";
+  // Soonest first — "next" should read as next.
+  if (n.newMoon && n.fullMoon && n.fullMoon < n.newMoon) bits.reverse();
+  return `Next · ${bits.join(" · ")}`;
+}
+
 /* The sign line, in three forms:
      today, change still ahead → "♉ Moon in Taurus · 27°10′ · tropical → Gemini from 4:12 pm"
      today, change already past → "♊ Moon in Gemini · 0°15′ · tropical · since 4:12 pm"
@@ -211,6 +262,10 @@ function render() {
   }
   $("phase-name").innerHTML = phaseLabel;
   $("illum").textContent = `${(day.illum * 100).toFixed(0)}% illuminated`;
+  const exact = eventExactLine(day);
+  $("event-exact").textContent = exact;
+  $("event-exact").hidden = !exact;
+  $("next-events").textContent = nextEventsLine(day);
   $("moon-sign").innerHTML = signLine(day);
   $("moonrise").textContent = fmtTime(day.moonTimes.rise);
   $("moonset").textContent = fmtTime(day.moonTimes.set);
@@ -279,6 +334,15 @@ function render() {
   const qualify = (title, range) =>
     range ? `${title} <span class="seg-range">${esc(range)}</span>` : title;
 
+  /* New/full moon text shows on the event day and, via the ±12h window, on
+     one adjacent day. Without saying when the event actually was, a reader
+     on the adjacent day has no way to tell why a Full Moon reading is on a
+     day that isn't the full moon. */
+  const eventWhen = (w) =>
+    state.showTransitions === false ? ""
+      : w.onThisDay ? `exact at ${fmtTime(w.instant)}`
+      : `${fmtDay(w.instant)}, ${fmtTime(w.instant)}`;
+
   for (const { seg, i } of segmentsToRender(day.signSegments, day)) {
     parts.push(section(
       qualify(`Moon in ${SIGNS[seg.value]}`, segmentRange(day.signSegments, i)),
@@ -296,27 +360,43 @@ function render() {
   if (day.newMoonWindow) {
     const w = day.newMoonWindow;
     const label = day.eclipse && day.eclipse.kind === "solar" ? "Solar Eclipse" : "New Moon";
-    parts.push(section(`${label} in ${esc(w.sign)}`,
-      contentOr(CONTENT.newMoonInSign[w.signKey])));
+    const when = eventWhen(w);
+    parts.push(section(qualify(`${label} in ${esc(w.sign)}`, when),
+      contentOr(CONTENT.newMoonInSign[w.signKey]), "newmoon-sign"));
     if (withHouses && w.house != null) {
-      parts.push(section(`${label} in your ${ORDINALS[w.house]} house`,
-        contentOr(CONTENT.newMoonInHouse[w.house])));
+      parts.push(section(qualify(`${label} in your ${ORDINALS[w.house]} house`, when),
+        contentOr(CONTENT.newMoonInHouse[w.house]), "newmoon-house"));
     }
-    // Ritual is generic — shown even without a profile or birth time.
+  }
+
+  /* The wishing ritual keeps its own, asymmetric window — open only from
+     the exact New Moon forward — so it is rendered outside the ±12h block
+     above. It is generic content: no profile or birth time needed. */
+  if (day.wishingWindow) {
+    const timing = `<p class="ritual-timing">New Moon exact at ${esc(fmtTime(day.wishingWindow.instant))} — wishes count from then.</p>`;
     parts.push(section(esc((CONTENT.newMoonRitual || {}).title || "New Moon Ritual"),
-      ritualContent(CONTENT.newMoonRitual)));
+      timing + ritualContent(CONTENT.newMoonRitual), "newmoon-ritual"));
+  } else if (day.wishingOpensAt) {
+    // Don't let the ritual just be missing on the day of the New Moon.
+    parts.push(`<p class="ritual-timing standalone">The New Moon is exact at ${esc(fmtTime(day.wishingOpensAt))} — the wishing window opens then.</p>`);
   }
   if (day.fullMoonWindow) {
     const w = day.fullMoonWindow;
     const label = day.eclipse && day.eclipse.kind === "lunar" ? "Lunar Eclipse" : "Full Moon";
-    parts.push(section(`${label} in ${esc(w.sign)}`,
-      contentOr(CONTENT.fullMoonInSign[w.signKey])));
+    const when = eventWhen(w);
+    parts.push(section(qualify(`${label} in ${esc(w.sign)}`, when),
+      contentOr(CONTENT.fullMoonInSign[w.signKey]), "fullmoon-sign"));
     if (withHouses && w.house != null) {
-      parts.push(section(`${label} in your ${ORDINALS[w.house]} house`,
-        contentOr(CONTENT.fullMoonInHouse[w.house])));
+      parts.push(section(qualify(`${label} in your ${ORDINALS[w.house]} house`, when),
+        contentOr(CONTENT.fullMoonInHouse[w.house]), "fullmoon-house"));
     }
-    parts.push(section(esc((CONTENT.fullMoonRitual || {}).title || "Full Moon Ritual"),
-      ritualContent(CONTENT.fullMoonRitual)));
+    // Today only, for the same reason as the wishing ritual: it is
+    // something to do tonight, not something to read about afterwards.
+    if (day.isToday) {
+      const timing = `<p class="ritual-timing">Full Moon exact at ${esc(fmtTime(w.instant))}.</p>`;
+      parts.push(section(esc((CONTENT.fullMoonRitual || {}).title || "Full Moon Ritual"),
+        timing + ritualContent(CONTENT.fullMoonRitual), "fullmoon-ritual"));
+    }
   }
   if (day.firstQuarter) {
     parts.push(section(`Waxing Quarter Moon in ${esc(day.firstQuarter.sign)}`,
