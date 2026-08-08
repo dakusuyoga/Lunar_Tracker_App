@@ -66,12 +66,11 @@
       </main>
 
       <footer>
+        <!-- The OpenStreetMap credit is required by their licence for using
+             Nominatim, so it stays here. The AGPL source offer lives in
+             Settings → About. -->
         Computed in-browser with Swiss Ephemeris · Houses: Placidus ·
-        Place search © OpenStreetMap contributors<br>
-        <!-- AGPL source offer: this link must stay reachable and point at
-             the source of the version currently deployed. -->
-        <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" rel="noopener">Source code</a>
-        (AGPL-3.0)
+        Place search © OpenStreetMap contributors
       </footer>
     </div>
   </div>
@@ -174,6 +173,22 @@
         <button type="submit" class="primary">Save location</button>
         <button id="loc-cancel" type="button">Cancel</button>
       </div>
+
+      <!-- About: this carries the AGPL source offer. Swiss Ephemeris is
+           AGPL-licensed and its engine is shipped to every visitor, so the
+           source of the deployed version must stay reachable from the app
+           itself — a public repo nobody can find is not an offer. Keep this
+           link working; it is the only place the offer now appears. -->
+      <section class="about">
+        <p class="micro-label">About</p>
+        <p class="hint">
+          Lunar Tracker · positions from the
+          <a href="https://www.astro.com/swisseph/" rel="noopener">Swiss Ephemeris</a>.
+          This app is free software under the
+          <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL-3.0</a>:
+          <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" rel="noopener">read or download the source</a>.
+        </p>
+      </section>
     </form>
   </dialog>
 

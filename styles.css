@@ -370,6 +370,29 @@ body {
 }
 .reading-h .mark { color: var(--ink-soft); }
 
+/* ── About (carries the AGPL source offer) ── */
+
+.about {
+  margin-top: 1.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
+}
+.about .micro-label {
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+.about .hint { margin: 0; }
+.about a {
+  color: var(--ink-soft);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.about a:hover { color: var(--accent); }
+
 /* ── Sign / house transitions ── */
 
 /* Secondary to the sign itself: it qualifies the reading, never competes. */
