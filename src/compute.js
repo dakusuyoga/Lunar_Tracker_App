@@ -325,8 +325,8 @@ export function computeDay(dateISO, location, natal, mode) {
   /* New Moon affirmations: active from the exact New Moon instant until 28
      days later, keyed by the natal house of that New Moon. When viewing
      today the actual clock time decides (the quotes switch over at the
-     exact instant); for other dates, local noon. House-keyed, so they need
-     a birth time (cusps). */
+     exact instant); other dates read at `anchor`, i.e. local noon.
+     House-keyed, so they need a birth time (cusps). */
   let affirmations = null;
   if (cusps) {
     const ref = anchor;
@@ -361,7 +361,11 @@ export function computeDay(dateISO, location, natal, mode) {
       }
     : null;
 
-  // Transiting Moon → natal conjunctions (conjunctions only, 5° orb, noon).
+  /* Transiting Moon → natal conjunctions (conjunctions only, 5° orb), read
+     at `anchor` like everything else: the current moment on today, local
+     noon when browsing another date. Orbs therefore tighten and loosen
+     through the day, and a conjunction can appear or drop away as the
+     Moon crosses the 5° boundary. */
   let conjunctions = null;
   if (natal && !natal.invalid) {
     conjunctions = [];
