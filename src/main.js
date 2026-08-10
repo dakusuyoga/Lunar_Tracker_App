@@ -467,6 +467,14 @@ function startLiveClock() {
 }
 
 function renderProfileSelect() {
+  /* The design's account button carries a name. Until V2 there are no
+     accounts, so it shows the active chart's name — and nothing at all
+     rather than a placeholder when there isn't one. The button still opens
+     the menu either way; Location, Display and About don't need a profile. */
+  const active = state.profiles.find((p) => p.id === state.activeProfileId);
+  const label = document.querySelector(".account-name");
+  if (label) label.textContent = active ? active.name : "";
+
   const sel = $("profile-select");
   sel.innerHTML = "";
   if (!state.profiles.length) {
@@ -742,12 +750,42 @@ function wire() {
     persist();
     render();
   });
-  $("manage-profiles").addEventListener("click", () => {
-    renderProfileList();
-    showProfileView(false);
-    profileDialog.showModal();
+  /* The design moved the occasional actions behind an account menu, and
+     split the old single Settings dialog into Location / Display / About.
+     `#manage-profiles` is now the account button that opens that menu. */
+  const accountMenu = $("account-menu");
+  const setMenu = (open) => {
+    accountMenu.hidden = !open;
+    $("manage-profiles").setAttribute("aria-expanded", String(open));
+  };
+  $("manage-profiles").addEventListener("click", (e) => {
+    e.stopPropagation();
+    setMenu(accountMenu.hidden);
   });
-  $("open-settings").addEventListener("click", openLocationForm);
+  document.addEventListener("click", (e) => {
+    if (!accountMenu.hidden && !accountMenu.contains(e.target)) setMenu(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !accountMenu.hidden) setMenu(false);
+  });
+
+  /* Menu items declare their target dialog in markup, so this stays correct
+     if the design moves them again. "Your chart" needs its list rebuilt
+     first; the rest are static or already wired by their own handlers. */
+  for (const item of document.querySelectorAll("[data-dialog]")) {
+    item.addEventListener("click", () => {
+      setMenu(false);
+      const dlg = $(item.dataset.dialog);
+      if (!dlg) return;
+      if (dlg.id === "profile-dialog") { renderProfileList(); showProfileView(false); }
+      if (dlg.id === "settings-dialog") { openLocationForm(); return; }
+      if (!dlg.open) dlg.showModal();
+    });
+  }
+  for (const btn of document.querySelectorAll('[data-action="close-dialog"]')) {
+    btn.addEventListener("click", () => btn.closest("dialog")?.close());
+  }
+
   $("location-label").addEventListener("click", openLocationForm);
 
   // Profile dialog

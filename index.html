@@ -88,7 +88,7 @@
     <header class="app-bar glass">
       <p class="wordmark"><svg width="18" height="18" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg><span class="brand">Lunar Tracker</span></p>
       <span class="spacer"></span>
-      <button type="button" class="btn btn-primary btn-compact" data-action="open-checkin">Check-in</button>
+      <button type="button" class="btn btn-primary btn-compact" data-action="open-checkin" hidden>Check-in</button>
 
       <div class="account">
         <label class="visually-hidden" for="profile-select">Profile</label>
@@ -99,15 +99,17 @@
         </button>
 
         <div id="account-menu" class="glass menu" role="menu" hidden>
-          <p class="menu-head"><span class="menu-name">Mara Ellis</span><span class="menu-mail">mara@example.com</span></p>
+          <!-- V2: the signed-in account. Hidden until real accounts exist —
+               a fabricated name and address must never reach a screen. -->
+          <p class="menu-head" hidden><span class="menu-name"></span><span class="menu-mail"></span></p>
           <hr class="rule">
           <button type="button" class="menu-item" role="menuitem" data-dialog="profile-dialog">Your chart</button>
-          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history">History</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history" hidden>History</button>
           <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog">Location</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display">Display</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-about">About</button>
           <hr class="rule">
-          <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out">Sign out</button>
+          <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out" hidden>Sign out</button>
         </div>
       </div>
     </header>
@@ -122,7 +124,7 @@
           <button type="button" id="prev-day" class="icon-btn" aria-label="Previous day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
           <button type="button" id="next-day" class="icon-btn" aria-label="Next day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
           <button type="button" id="today-btn" class="ghost-btn">Today</button>
-          <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar">
+          <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar" hidden>
             <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg>
           </button>
         </div>
@@ -416,7 +418,7 @@
       <div class="date-controls">
         <button type="button" class="icon-btn" data-action="prev-day" aria-label="Previous day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
         <button type="button" class="icon-btn" data-action="next-day" aria-label="Next day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
-        <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg></button>
+        <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar" hidden><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg></button>
         <button type="button" class="ghost-btn" data-action="today">Today</button>
       </div>
 
