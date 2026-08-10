@@ -13,7 +13,9 @@ import { attachPlaceSearch, timezoneFor } from "./geocode.js";
 import { supabase, currentSession } from "./supabase.js";
 import { initAuth, signOut } from "./auth.js";
 import { showScreen } from "./screens.js";
-import { fetchProfileRow, rowToProfile, rowToLocation } from "./profile.js";
+import {
+  fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
+} from "./profile.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g,
@@ -674,7 +676,7 @@ function validCoords(lat, lon) {
     lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
 }
 
-function pfSubmit(ev) {
+async function pfSubmit(ev) {
   ev.preventDefault();
   const errEl = $("pf-error");
   const fail = (msg) => { errEl.textContent = msg; errEl.hidden = false; };
@@ -711,8 +713,10 @@ function pfSubmit(ev) {
     return fail("Please choose a valid IANA timezone (e.g. Europe/Berlin).");
   }
 
+  if (!account) return fail("You're signed out. Log in again to save your chart.");
+
   const profile = {
-    id: editingProfileId || crypto.randomUUID(),
+    id: account.id,          // one chart per account: the user IS the key
     name,
     birthDate,
     birthTime,
@@ -721,15 +725,46 @@ function pfSubmit(ev) {
     timezone,
     timezoneAuto: pfTzAuto,
   };
-  if (editingProfileId) {
-    state.profiles = state.profiles.map((p) => (p.id === editingProfileId ? profile : p));
-  } else {
-    state.profiles.push(profile);
+
+  /* Compute the natal chart here and store it as degrees. The database
+     keeps raw longitudes, never signs or houses — degrees convert to
+     either zodiac, whereas a stored word like "scorpio" is already
+     committed to one and can't be flipped. Same rule as natal_snapshot. */
+  let natalData;
+  try {
+    const natal = natalFor(profile);
+    if (natal.invalid) return fail(`That birth data couldn't be interpreted (${natal.reason}).`);
+    natalData = {
+      natal_utc: natal.utcISO,
+      ayanamsa: natal.ayanamsa,
+      time_unknown: natal.timeUnknown,
+      house_system: "placidus",
+      algo_version: 1,
+      points: natal.points,
+      angles: natal.angles || null,
+      cusps: natal.cusps || null,
+    };
+  } catch (e) {
+    return fail(`Couldn't compute the chart: ${(e && e.message) || e}`);
   }
-  state.activeProfileId = profile.id;
-  persist();
-  renderProfileList();
-  showProfileView(false);
+
+  const submit = $("profile-form").querySelector('button[type="submit"]');
+  submit.disabled = true;
+  try {
+    profileRow = await saveProfileRow(account.id, profile, natalData, profileRow);
+  } catch (e) {
+    submit.disabled = false;
+    return fail(`Couldn't save: ${(e && e.message) || e}`);
+  }
+  submit.disabled = false;
+
+  state.profiles = [rowToProfile(profileRow)];
+  state.activeProfileId = account.id;
+  const nameEl = document.querySelector(".menu-name");
+  if (nameEl) nameEl.textContent = profile.name;
+
+  profileDialog.close();
+  showScreen("screen-daily");
   render();
 }
 
@@ -789,7 +824,17 @@ function locSubmit(ev) {
   }
 
   state.location = { displayName, latitude: lat, longitude: lon, timezone };
+
+  /* Display location belongs to the account, not the device: it decides
+     which local day a check-in belongs to, and that day is part of the
+     row's identity. Two devices set differently would disagree about what
+     "today" is. Saved locally too, so the view survives a failed write. */
   persist();
+  if (account) {
+    saveDisplayLocation(account.id, state.location)
+      .catch((e) => console.warn("display location not saved to the account", e));
+  }
+
   settingsDialog.close();
   selectedDate = clampDate(selectedDate);
   render();
@@ -860,6 +905,11 @@ function wire() {
   for (const btn of document.querySelectorAll('[data-action="close-dialog"]')) {
     btn.addEventListener("click", () => btn.closest("dialog")?.close());
   }
+  /* First run has no chart yet, so it reuses the chart form rather than
+     duplicating one. The form knows how to save to Postgres and will send
+     the user on to the daily view once it does. */
+  $("cta-first-run")?.addEventListener("click", () => openProfileForm(null));
+
   document.querySelector('[data-action="sign-out"]')
     ?.addEventListener("click", async () => {
       setMenu(false);
