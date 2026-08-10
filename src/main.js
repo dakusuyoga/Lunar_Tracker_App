@@ -7,7 +7,7 @@ import {
   natalFor, computeDay,
 } from "./compute.js";
 import { CONTENT } from "./content.js";
-import { moonIcon } from "./moonicon.js";
+import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
 import { attachPlaceSearch, timezoneFor } from "./geocode.js";
 
@@ -151,28 +151,35 @@ function nextEventsLine(day) {
      today, change still ahead → "♉ Moon in Taurus · 27°10′ · tropical → Gemini from 4:12 pm"
      today, change already past → "♊ Moon in Gemini · 0°15′ · tropical · since 4:12 pm"
      past / future             → "♉ Taurus until 4:12 pm · ♊ Gemini after · tropical" */
+/* Zodiac glyphs need the design's .glyph wrapper: it forces text (not
+   colour-emoji) presentation and gives them the display face. Bare, they
+   get picked up by the system emoji font and render as coloured tiles. */
+const glyph = (i) => `<span class="glyph">${SIGN_GLYPHS[i]}</span>`;
+
 function signLine(day) {
   const idx = day.moonSignIndex;
-  const plain = `${SIGN_GLYPHS[idx]} Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${state.zodiacMode}`;
+  const plain = `Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${state.zodiacMode}`;
   const segs = day.signSegments;
-  if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
+  if (state.showTransitions === false || !segs || segs.length < 2) {
+    return `${glyph(idx)} ${esc(plain)}`;
+  }
 
   if (!day.isToday) {
     const span = segs.map((s, i) =>
       i === segs.length - 1
-        ? `${SIGN_GLYPHS[s.value]} ${SIGNS[s.value]} after`
-        : `${SIGN_GLYPHS[s.value]} ${SIGNS[s.value]} until ${fmtTime(s.to)}`
+        ? `${glyph(s.value)} ${esc(`${SIGNS[s.value]} after`)}`
+        : `${glyph(s.value)} ${esc(`${SIGNS[s.value]} until ${fmtTime(s.to)}`)}`
     ).join(" · ");
-    return `${esc(span)} · ${esc(state.zodiacMode)}`;
+    return `${span} · ${esc(state.zodiacMode)}`;
   }
 
   const active = activeSegment(segs, day.anchor);
   const i = segs.indexOf(active);
   const next = segs[i + 1];
   const note = next
-    ? `→ ${SIGN_GLYPHS[next.value]} ${SIGNS[next.value]} from ${fmtTime(next.from)}`
-    : `since ${fmtTime(active.from)}`;
-  return `${esc(plain)} <span class="ingress">${esc(note)}</span>`;
+    ? `<span class="ingress">→ ${glyph(next.value)} ${esc(`${SIGNS[next.value]} from ${fmtTime(next.from)}`)}</span>`
+    : `<span class="ingress">${esc(`since ${fmtTime(active.from)}`)}</span>`;
+  return `${glyph(idx)} ${esc(plain)} ${note}`;
 }
 
 /* The same treatment for the natal-house line under the moon card. Built
@@ -254,7 +261,13 @@ function render() {
   $("date-input").value = selectedDate;
 
   // Astronomical card
-  $("moon-icon").innerHTML = moonIcon(day.phaseAngle, 96);
+  /* Update only the shadow's geometry. The photo and glow are siblings in
+     the markup — replacing #moon-icon wholesale would re-create the <img>
+     on every minute-tick and flicker. */
+  const shadow = $("moon-shadow");
+  const d = moonShadowPath(day.phaseAngle);
+  shadow.setAttribute("d", d || "M 0 0");
+  shadow.style.display = d ? "" : "none";
   let phaseLabel = esc(day.phase);
   if (day.eclipse) {
     const label = day.eclipse.kind === "solar" ? "Solar Eclipse" : "Lunar Eclipse";
@@ -286,7 +299,7 @@ function render() {
     }
     if (day.conjunctions.length) {
       transit += day.conjunctions.map((c) =>
-        `<p class="conj">Moon ☌ ${esc(c.label)} <span class="orb">(orb ${c.orb.toFixed(1)}°)</span></p>`
+        `<p class="conj">Moon <span class="glyph">☌︎</span> ${esc(c.label)} <span class="orb">(orb ${c.orb.toFixed(1)}°)</span></p>`
       ).join("");
     } else {
       transit += `<p class="conj none">No natal conjunctions today</p>`;
@@ -419,8 +432,13 @@ function render() {
 
   // Header state
   renderProfileSelect();
-  $("mode-tropical").classList.toggle("active", state.zodiacMode === "tropical");
-  $("mode-sidereal").classList.toggle("active", state.zodiacMode === "sidereal");
+  /* `is-active` is the design's segmented-control state class — it also
+     drives aria-selected, so set both rather than only the styling. */
+  for (const [id, mode] of [["mode-tropical", "tropical"], ["mode-sidereal", "sidereal"]]) {
+    const on = state.zodiacMode === mode;
+    $(id).classList.toggle("is-active", on);
+    $(id).setAttribute("aria-selected", String(on));
+  }
 }
 
 /* Today's view is read at the current moment, so it goes stale on its own:
