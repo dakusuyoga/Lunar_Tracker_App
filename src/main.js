@@ -10,6 +10,10 @@ import { CONTENT } from "./content.js";
 import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
 import { attachPlaceSearch, timezoneFor } from "./geocode.js";
+import { supabase, currentSession } from "./supabase.js";
+import { initAuth, signOut } from "./auth.js";
+import { showScreen } from "./screens.js";
+import { fetchProfileRow, rowToProfile, rowToLocation } from "./profile.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g,
@@ -445,6 +449,77 @@ function render() {
    the Moon moves ~0.55°/hour and can change sign or house mid-session.
    Re-render each minute, and again whenever the tab is brought back — a
    screen left open overnight would otherwise still be showing yesterday. */
+/* The design ships a proper boot-failure state; use it rather than
+   replacing the loading screen with bare paragraphs. The technical detail
+   stays visible on purpose — it is what gets read out over a message when
+   someone's app won't start. */
+function showBootError(e) {
+  const box = document.querySelector(".boot-error");
+  if (!box) return;
+  document.querySelector(".boot-bar")?.setAttribute("hidden", "");
+  document.querySelector(".boot-title")?.setAttribute("hidden", "");
+  document.querySelector(".boot-note")?.setAttribute("hidden", "");
+  const trace = box.querySelector(".boot-trace");
+  if (trace) {
+    trace.textContent =
+      `${(e && e.name) || "Error"}: ${(e && e.message) || e}\n` +
+      "If reloading doesn't help: on iPhone, Lockdown Mode blocks this app — " +
+      "tap “aA” in the address bar → Website Settings → allow this site.";
+  }
+  box.hidden = false;
+  box.querySelector('[data-action="retry-boot"]')
+    ?.addEventListener("click", () => window.location.reload());
+}
+
+/* The signed-in account, or null. Kept module-level because the check-in
+   and ritual writes all need the user id. */
+let account = null;
+let profileRow = null;
+
+/* Which screen a session implies: no session → login; session but no chart
+   yet → first run; otherwise the daily view. */
+async function applySession(session) {
+  account = session ? session.user : null;
+
+  if (!account) {
+    profileRow = null;
+    state.profiles = [];
+    state.activeProfileId = null;
+    showScreen("screen-login");
+    return;
+  }
+
+  const mail = document.querySelector(".menu-mail");
+  const name = document.querySelector(".menu-name");
+  if (mail) mail.textContent = account.email || "";
+
+  try {
+    profileRow = await fetchProfileRow(account.id);
+  } catch {
+    // A failed read shouldn't strand the user on a blank screen; treat it
+    // as "no chart yet" and let them retry from the form.
+    profileRow = null;
+  }
+
+  if (!profileRow) {
+    state.profiles = [];
+    state.activeProfileId = null;
+    showScreen("screen-first-run");
+    return;
+  }
+
+  // One row, mapped into the array shape the rest of the app expects.
+  const profile = rowToProfile(profileRow);
+  state.profiles = [profile];
+  state.activeProfileId = profile.id;
+  state.location = rowToLocation(profileRow);
+  if (name) name.textContent = profile.name;
+  document.querySelector(".menu-head").hidden = false;
+
+  showScreen("screen-daily");
+  render();
+}
+
 function startLiveClock() {
   let lastToday = todayISO();
   const tick = () => {
@@ -785,6 +860,11 @@ function wire() {
   for (const btn of document.querySelectorAll('[data-action="close-dialog"]')) {
     btn.addEventListener("click", () => btn.closest("dialog")?.close());
   }
+  document.querySelector('[data-action="sign-out"]')
+    ?.addEventListener("click", async () => {
+      setMenu(false);
+      await signOut();   // onAuthStateChange returns us to the login screen
+    });
 
   $("location-label").addEventListener("click", openLocationForm);
 
@@ -881,28 +961,35 @@ function wire() {
     return;
   }
 
+  /* The engine and the session are independent, and the engine is the slow
+     one (~2.5 MB). Start it immediately and settle the session alongside,
+     so a returning user isn't waiting on a sequence of two round trips. */
+  const enginePromise = initEphemeris();
+  const sessionPromise = currentSession();
+
   try {
-    await initEphemeris();
+    await enginePromise;
   } catch (e) {
     console.error(e);
-    const p1 = document.createElement("p");
-    p1.textContent = "Could not load the ephemeris. Check your connection and reload.";
-    const p2 = document.createElement("p");
-    p2.className = "loading-detail";
-    p2.textContent = `Technical detail: ${(e && e.message) || e}`;
-    const p3 = document.createElement("p");
-    p3.className = "loading-detail";
-    p3.textContent =
-      "If reloading doesn't help: on iPhone, Lockdown Mode blocks this app — " +
-      "tap “aA” in the address bar → Website Settings → allow this site. " +
-      "Otherwise, send the technical detail above to the site owner.";
-    loading.replaceChildren(p1, p2, p3);
+    showBootError(e);
     return;
   }
+
   wire();
+  initAuth();
   loading.hidden = true;
   $("app").hidden = false;
-  render();
+
+  /* Hard gate: no session, no app. The moon maths would run without an
+     account, but a check-in has nowhere to go, and the design treats the
+     logged-out state as the front door rather than a degraded daily view. */
+  const session = await sessionPromise;
+  await applySession(session);
+
+  if (supabase) {
+    supabase.auth.onAuthStateChange((_event, s) => { applySession(s); });
+  }
+
   startLiveClock();
 
   // After a successful boot, cache the heavy engine assets on-device so
