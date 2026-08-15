@@ -16,6 +16,8 @@ import { showScreen } from "./screens.js";
 import {
   fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
 } from "./profile.js";
+import { initCheckIn, syncTodayState } from "./checkinui.js";
+import { startOutbox } from "./outbox.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g,
@@ -520,6 +522,10 @@ async function applySession(session) {
 
   showScreen("screen-daily");
   render();
+
+  // Anything the outbox is still holding goes now that we have a session.
+  startOutbox(supabase);
+  await syncTodayState();
 }
 
 function startLiveClock() {
@@ -1041,6 +1047,19 @@ function wire() {
 
   wire();
   initAuth();
+
+  /* Accessors rather than values: the check-in screen needs whatever is
+     current at the moment it saves, and main.js owns that state. */
+  await initCheckIn({
+    account: () => account,
+    location: () => state.location,
+    profileRow: () => profileRow,
+    natal: () => {
+      const p = state.profiles.find((x) => x.id === state.activeProfileId);
+      return p ? natalFor(p) : null;
+    },
+    engineReady: () => true,   // we only get here after initEphemeris resolves
+  });
   loading.hidden = true;
   $("app").hidden = false;
 
