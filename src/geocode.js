@@ -12,7 +12,13 @@ export const DEBOUNCE_MS = 1100;
 export async function searchPlaces(query, signal) {
   const url = `${NOMINATIM}?format=jsonv2&limit=5&accept-language=en&q=${encodeURIComponent(query)}`;
   const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`Nominatim ${res.status}`);
+  if (!res.ok) {
+    // Carry the status so the UI can tell "the service refused us" apart
+    // from "this place doesn't exist" — they need different advice.
+    const err = new Error(`Nominatim ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   const rows = await res.json();
   return rows.map((r) => ({
     displayName: r.display_name,
@@ -71,7 +77,19 @@ export function attachPlaceSearch(inputEl, resultsEl, onPick) {
         }
       } catch (e) {
         if (e.name === "AbortError") return;
-        resultsEl.innerHTML = `<li class="hint">Search failed — check your connection or use manual coordinates</li>`;
+        /* A reachability failure must never read like "no such place".
+           Someone told their birthplace doesn't exist types coordinates
+           instead and silently ends up with an approximate chart — which
+           is exactly how a real birthplace ended up stored as a bare
+           lat/lon pair during testing. */
+        const msg = e.status === 429
+          ? "The place search is busy — wait a moment and try again."
+          : e.status
+            ? `The place search is unavailable right now (error ${e.status}). Try again shortly.`
+            : "Couldn't reach the place search. Check your connection and try again.";
+        resultsEl.innerHTML =
+          `<li class="hint">${msg}<br>Your birthplace is almost certainly listed — ` +
+          `prefer retrying over entering coordinates by hand.</li>`;
       }
     }, DEBOUNCE_MS);
   });

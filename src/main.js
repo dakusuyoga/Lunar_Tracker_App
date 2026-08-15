@@ -648,7 +648,21 @@ function openProfileForm(profile) {
   $("pf-time-unknown").checked = profile ? !!profile.timeUnknown : false;
   $("pf-time").disabled = $("pf-time-unknown").checked;
   $("pf-place").value = "";
-  $("pf-place-chosen").textContent = profile ? `Selected: ${profile.place.displayName}` : "";
+  /* A chart built from hand-typed coordinates looks identical to one
+     picked from the map, so say when it isn't. The tell is the label: with
+     no place name to store, the form falls back to the bare lat/lon pair.
+     Half a degree of longitude moves every Placidus cusp. */
+  const chosen = $("pf-place-chosen");
+  if (!profile) {
+    chosen.textContent = "";
+  } else if (/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(profile.place.displayName.trim())) {
+    chosen.innerHTML =
+      `Selected: ${esc(profile.place.displayName)} ` +
+      `<span class="hint">— entered as coordinates, so this location is approximate. ` +
+      `Search for the place name if you can; it moves the house cusps.</span>`;
+  } else {
+    chosen.textContent = `Selected: ${profile.place.displayName}`;
+  }
   $("pf-lat").value = profile ? profile.place.latitude : "";
   $("pf-lon").value = profile ? profile.place.longitude : "";
   $("pf-manual").open = false;
