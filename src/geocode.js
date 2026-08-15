@@ -10,7 +10,8 @@ const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 export const DEBOUNCE_MS = 1100;
 
 export async function searchPlaces(query, signal) {
-  const url = `${NOMINATIM}?format=jsonv2&limit=5&accept-language=en&q=${encodeURIComponent(query)}`;
+  const url = `${NOMINATIM}?format=jsonv2&limit=5&addressdetails=1&accept-language=en`
+    + `&q=${encodeURIComponent(query)}`;
   const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
   if (!res.ok) {
     // Carry the status so the UI can tell "the service refused us" apart
@@ -21,10 +22,39 @@ export async function searchPlaces(query, signal) {
   }
   const rows = await res.json();
   return rows.map((r) => ({
-    displayName: r.display_name,
+    displayName: shortLabel(r),   // what we store and show
+    fullName: r.display_name,     // what the results list shows, for picking
     latitude: parseFloat(r.lat),
     longitude: parseFloat(r.lon),
   }));
+}
+
+/* Nominatim's display_name is the entire administrative hierarchy, which
+   drags in levels nobody recognises as part of an address — Toronto comes
+   back as "Toronto, Golden Horseshoe, Ontario, Canada", the Golden
+   Horseshoe being a regional-planning area, not somewhere you were born.
+   The structured fields give a label a person would actually write.
+
+   The full string still appears in the results list, where the extra
+   hierarchy is genuinely useful for telling two identically-named places
+   apart. It just doesn't belong in the stored label. */
+function shortLabel(r) {
+  const a = r.address || {};
+
+  /* The result's OWN name, not a parent. Taking address.city instead turns
+     "Beelitz-Heilstätten" into "Beelitz" — the municipality it sits in —
+     silently relabelling the place someone actually searched for. */
+  const place = (r.name && r.name.trim())
+    || String(r.display_name || "").split(",")[0].trim();
+  if (!place) return r.display_name;
+
+  /* Keep one region level. Without it "Springfield, United States" is
+     three different cities, which is fine for a display location and not
+     fine for a birthplace. What's dropped is the noise between: county,
+     postcode, and planning regions like "Golden Horseshoe". */
+  const region = a.state || a.province || a.region || a.county || null;
+
+  return [place, region, a.country].filter(Boolean).join(", ");
 }
 
 // Coordinates → IANA timezone name (offline), or null if lookup fails.
@@ -67,7 +97,9 @@ export function attachPlaceSearch(inputEl, resultsEl, onPick) {
           const li = document.createElement("li");
           const btn = document.createElement("button");
           btn.type = "button";
-          btn.textContent = p.displayName;
+          // The full hierarchy here: it's what distinguishes one Springfield
+          // from another. Only the stored label is shortened.
+          btn.textContent = p.fullName || p.displayName;
           btn.addEventListener("click", () => {
             clear();
             onPick(p);
