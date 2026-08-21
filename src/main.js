@@ -17,7 +17,21 @@ import {
   fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
 } from "./profile.js";
 import { initCheckIn, syncTodayState } from "./checkinui.js";
-import { startOutbox } from "./outbox.js";
+import { startOutbox, pendingFor } from "./outbox.js";
+import { fetchCheckIn } from "./checkin.js";
+import { renderRecordCard } from "./recordcard.js";
+import { toggleMarkup, fetchCompletions, setCompletion, eventDateOf } from "./rituals.js";
+
+/* Which ceremonies are already marked for the lunation currently on
+   screen. Loaded per lunation, not per day — a ritual window spans two
+   calendar days, so the day is the wrong grain. */
+let ritualsDone = new Set();
+let ritualsLoadedFor = null;
+
+const activeNatal = () => {
+  const p = state.profiles.find((x) => x.id === state.activeProfileId);
+  return p ? natalFor(p) : null;
+};
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g,
@@ -71,14 +85,20 @@ function contentOr(text) {
 
 /* Rituals: same verbatim treatment as the readings, plus numbered steps
    rendered with a hanging number and optional per-part sub-headings. */
-function ritualContent(ritual) {
+/* `marks` maps a part heading to its ritual key, so the Full Moon panel's
+   two ceremonies each get their own toggle beside their own sub-heading.
+   The New Moon panel has one ceremony and takes `lead` instead. */
+function ritualContent(ritual, marks = {}, lead = null, done = new Set()) {
   if (!ritual || !Array.isArray(ritual.parts)) {
     return `<p class="reading pending">— content pending —</p>`;
   }
   const out = [];
+  if (lead) out.push(toggleMarkup(lead, done.has(lead)));
   for (const part of ritual.parts) {
     if (part.heading) {
       out.push(`<h4 class="ritual-h">${esc(part.heading)}</h4>`);
+      const key = marks[part.heading];
+      if (key) out.push(toggleMarkup(key, done.has(key)));
     }
     for (const raw of String(part.text || "").split("\n")) {
       const line = raw.trim();
@@ -396,7 +416,8 @@ function render() {
   if (day.wishingWindow) {
     const timing = `<p class="ritual-timing">New Moon exact at ${esc(fmtTime(day.wishingWindow.instant))} — wishes count from then.</p>`;
     parts.push(section(esc((CONTENT.newMoonRitual || {}).title || "New Moon Ritual"),
-      timing + ritualContent(CONTENT.newMoonRitual), "newmoon-ritual"));
+      timing + ritualContent(CONTENT.newMoonRitual, {}, "new_moon_wishing", ritualsDone),
+      "newmoon-ritual"));
   } else if (day.wishingOpensAt) {
     // Don't let the ritual just be missing on the day of the New Moon.
     parts.push(`<p class="ritual-timing standalone">The New Moon is exact at ${esc(fmtTime(day.wishingOpensAt))} — the wishing window opens then.</p>`);
@@ -416,7 +437,11 @@ function render() {
     if (day.isToday) {
       const timing = `<p class="ritual-timing">Full Moon exact at ${esc(fmtTime(w.instant))}.</p>`;
       parts.push(section(esc((CONTENT.fullMoonRitual || {}).title || "Full Moon Ritual"),
-        timing + ritualContent(CONTENT.fullMoonRitual), "fullmoon-ritual"));
+        timing + ritualContent(CONTENT.fullMoonRitual, {
+          "Full Moon Forgiveness Ceremony": "full_moon_forgiveness",
+          "Entering a State of Gratitude": "full_moon_gratitude",
+        }, null, ritualsDone),
+        "fullmoon-ritual"));
     }
   }
   if (day.firstQuarter) {
@@ -436,6 +461,44 @@ function render() {
   $("readings").innerHTML = parts.join('<hr class="rule">');
   for (const d of $("readings").querySelectorAll("details")) {
     if (wasOpen.has(d.dataset.kind)) d.open = true;
+  }
+
+  /* The saved check-in for whichever date is being viewed. Fetched
+     asynchronously so the daily view never waits on the network to draw;
+     the card simply appears when the answer arrives. The outbox copy wins,
+     because it exists before the row has reached Postgres. */
+  if (account) {
+    const forDate = selectedDate;
+    const queued = pendingFor(forDate);
+    if (queued) {
+      renderRecordCard(queued.row, forDate, state.location.timezone);
+    } else {
+      renderRecordCard(null, forDate, state.location.timezone);
+      fetchCheckIn(account.id, forDate).then((row) => {
+        // Ignore a late reply for a date the user has already left.
+        if (row && selectedDate === forDate) {
+          renderRecordCard(row, forDate, state.location.timezone);
+        }
+      });
+    }
+  }
+
+  /* Ritual toggles reflect the lunation on screen. Fetched once per
+     lunation and re-rendered when the answer lands, so the panels draw
+     immediately rather than waiting on the network. */
+  const lunation = day.wishingWindow?.instant || (day.isToday && day.fullMoonWindow?.instant);
+  if (account && lunation) {
+    const key = eventDateOf(lunation);
+    if (ritualsLoadedFor !== key) {
+      ritualsLoadedFor = key;
+      fetchCompletions(account.id, key).then((set) => {
+        ritualsDone = set;
+        if (ritualsLoadedFor === key) render();
+      });
+    }
+  } else {
+    ritualsLoadedFor = null;
+    ritualsDone = new Set();
   }
 
   // Header state
@@ -929,6 +992,35 @@ function wire() {
      duplicating one. The form knows how to save to Postgres and will send
      the user on to the daily view once it does. */
   $("cta-first-run")?.addEventListener("click", () => openProfileForm(null));
+
+  /* Ritual toggles are injected with the readings, so the listener lives
+     on the container. Optimistic: flip the button immediately, revert if
+     the write fails — the alternative is a control that feels broken on a
+     slow connection. */
+  $("readings").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".ritual-toggle");
+    if (!btn || !account) return;
+    const ritual = btn.dataset.ritual;
+    const day = computeDay(selectedDate, state.location, activeNatal(), state.zodiacMode);
+    const instant = day.wishingWindow?.instant || day.fullMoonWindow?.instant;
+    if (!instant) return;
+
+    const done = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", String(done));
+    btn.classList.toggle("is-done", done);
+    btn.textContent = done ? "Done ✓" : "Mark as done";
+    if (done) ritualsDone.add(ritual); else ritualsDone.delete(ritual);
+
+    try {
+      await setCompletion(account.id, ritual, instant, done);
+    } catch (err) {
+      console.error("ritual toggle failed", err);
+      btn.setAttribute("aria-pressed", String(!done));
+      btn.classList.toggle("is-done", !done);
+      btn.textContent = !done ? "Done ✓" : "Mark as done";
+      if (done) ritualsDone.delete(ritual); else ritualsDone.add(ritual);
+    }
+  });
 
   document.querySelector('[data-action="sign-out"]')
     ?.addEventListener("click", async () => {
