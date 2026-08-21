@@ -21,6 +21,7 @@ import { startOutbox, pendingFor } from "./outbox.js";
 import { fetchCheckIn } from "./checkin.js";
 import { renderRecordCard } from "./recordcard.js";
 import { toggleMarkup, fetchCompletions, setCompletion, eventDateOf } from "./rituals.js";
+import { initHistory, openHistory } from "./history.js";
 
 /* Which ceremonies are already marked for the lunation currently on
    screen. Loaded per lunation, not per day — a ritual window spans two
@@ -589,6 +590,12 @@ async function applySession(session) {
   // Anything the outbox is still holding goes now that we have a session.
   startOutbox(supabase);
   await syncTodayState();
+
+  initHistory({
+    userId: account.id,
+    timezone: state.location.timezone,
+    onPick: (dateISO) => setDate(dateISO),
+  });
 }
 
 function startLiveClock() {
@@ -982,6 +989,13 @@ function wire() {
       if (!dlg) return;
       if (dlg.id === "profile-dialog") { renderProfileList(); showProfileView(false); }
       if (dlg.id === "settings-dialog") { openLocationForm(); return; }
+      if (dlg.id === "dialog-history" && account) {
+        openHistory({
+          userId: account.id,
+          timezone: state.location.timezone,
+          focusDate: selectedDate,
+        });
+      }
       if (!dlg.open) dlg.showModal();
     });
   }

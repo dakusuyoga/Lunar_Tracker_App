@@ -840,3 +840,44 @@ span.mark { cursor: default; }
     transition-duration: .001ms !important;
   }
 }
+
+/* ------------------------------------------------- 17. V2 WIRING ADDITIONS */
+
+/* History calendar markers. A check-in is the filled dot the design already
+   ships; a completed ritual draws a halo around that same dot. The two are
+   not alternatives — a lunation day can be both — and a ritual without a
+   check-in shows the halo on its own. */
+.cal-day.has-ritual .dot { position: relative; }
+.cal-day.has-ritual .dot::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  opacity: .85;
+}
+.cal-day.has-ritual:not(.has-record) .dot {
+  background: transparent;
+  opacity: 1;
+}
+
+.cal-empty { text-align: center; margin-top: 14px; }
+
+/* Ritual completion toggle — quiet by design: a private acknowledgement,
+   not an achievement badge. */
+.ritual-toggle {
+  display: inline-block;
+  margin: 0 0 16px;
+  padding: 7px 14px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ritual-toggle:hover { border-color: var(--gold); }
+.ritual-toggle.is-done { background: var(--gold-wash); border-color: var(--gold); }
