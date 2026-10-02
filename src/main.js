@@ -539,6 +539,30 @@ function showBootError(e) {
     ?.addEventListener("click", () => window.location.reload());
 }
 
+/* Shown when we can't tell whether the account has a chart. Deliberately
+   NOT the first-run screen: inviting someone to re-enter birth details
+   they already have is how a chart gets silently replaced. */
+function showProfileUnreachable() {
+  const card = document.querySelector("#screen-first-run .card-setup");
+  showScreen("screen-first-run");
+  if (!card) return;
+  const title = card.querySelector(".display-title");
+  const lede = card.querySelector(".lede");
+  const cta = card.querySelector(".cta");
+  const btn = $("cta-first-run");
+  if (title) title.textContent = "Couldn't load your chart.";
+  if (lede) {
+    lede.textContent =
+      "We reached your account but not your chart, so we don't know whether " +
+      "you've set one up. Nothing has been changed.";
+  }
+  if (cta) cta.hidden = true;
+  if (btn) {
+    btn.textContent = "Try again";
+    btn.onclick = () => window.location.reload();
+  }
+}
+
 /* The signed-in account, or null. Kept module-level because the check-in
    and ritual writes all need the user id. */
 let account = null;
@@ -561,12 +585,16 @@ async function applySession(session) {
   const name = document.querySelector(".menu-name");
   if (mail) mail.textContent = account.email || "";
 
+  /* "No chart yet" and "couldn't find out" are different answers, and
+     conflating them is dangerous: an existing user dropped into first run
+     would enter their birth details again, overwriting a chart that was
+     only ever unreachable. So a failed read says so and offers a retry. */
   try {
     profileRow = await fetchProfileRow(account.id);
-  } catch {
-    // A failed read shouldn't strand the user on a blank screen; treat it
-    // as "no chart yet" and let them retry from the form.
-    profileRow = null;
+  } catch (e) {
+    console.error("profile read failed", e);
+    showProfileUnreachable();
+    return;
   }
 
   if (!profileRow) {
