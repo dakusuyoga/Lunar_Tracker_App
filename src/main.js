@@ -105,7 +105,7 @@ function contentOr(text) {
    The New Moon panel has one ceremony and takes `lead` instead. */
 function ritualContent(ritual, marks = {}, lead = null, done = new Set()) {
   if (!ritual || !Array.isArray(ritual.parts)) {
-    return `<p class="reading pending">— content pending —</p>`;
+    return `<div class="reading"><p class="pending">— content pending —</p></div>`;
   }
   const out = [];
   if (lead) out.push(toggleMarkup(lead, done.has(lead)));
@@ -124,11 +124,14 @@ function ritualContent(ritual, marks = {}, lead = null, done = new Set()) {
       } else if (step) {
         out.push(`<p class="ritual-step"><span class="num">${esc(step[1])}.</span> <span>${esc(step[2])}</span></p>`);
       } else {
-        out.push(`<p class="reading">${esc(line)}</p>`);
+        out.push(`<p>${esc(line)}</p>`);
       }
     }
   }
-  return out.join("");
+  /* Wrapped in .reading like every other panel body: the design styles
+     `.reading p`, so a bare `p.reading` picks up no typography at all and
+     ritual prose rendered in the browser default. */
+  return `<div class="reading">${out.join("")}</div>`;
 }
 
 /* `kind` is a stable identity for the panel (e.g. "sign", "house") so an
