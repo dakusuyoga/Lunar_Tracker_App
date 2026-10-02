@@ -888,8 +888,11 @@ span.mark { cursor: default; }
    as fields waiting to be filled in. */
 .chart-view {
   margin-top: 24px;
-  background: var(--navy-panel);
-  border: 1px solid var(--hairline);
+  background: var(--navy-glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-highlight);
+  border: 1px solid var(--hairline-glass);
   border-radius: 16px;
   padding: 20px 22px;
   display: flex;
