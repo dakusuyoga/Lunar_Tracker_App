@@ -64,25 +64,38 @@ function persist() {
 
 /* ── Content rendering (verbatim text, light structure) ─────────── */
 
+/* A reading, in the design's shape:
+
+     <div class="reading">
+       <p class="reading-h">Daily Moon in Taurus</p>   ← first line
+       <p>…body…</p>
+       <p class="ritual-do"><span class="micro-label">Good for…</span>value</p>
+
+   The stored text keeps a label and its value on consecutive lines, marked
+   with ◗. The design pairs them into one block with a gold micro-label and
+   drops the glyph — the label's styling is what the ◗ stood in for. */
 function contentOr(text) {
   if (!text || !String(text).trim()) {
-    return `<p class="reading pending">— content pending —</p>`;
+    return `<div class="reading"><p class="pending">— content pending —</p></div>`;
   }
-  const lines = String(text).split("\n");
-  const hasMarks = lines.some((l) => l.trim().startsWith("◗"));
+  const lines = String(text).split("\n").map((l) => l.trim()).filter(Boolean);
   const out = [];
-  lines.forEach((raw, i) => {
-    const line = raw.trim();
-    if (!line) return;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (line.startsWith("◗")) {
-      out.push(`<h4 class="reading-h"><span class="mark">◗ </span>${esc(line.slice(1).trim())}</h4>`);
-    } else if (i === 0 && hasMarks) {
-      out.push(`<p class="reading-title">${esc(line)}</p>`);
+      const label = esc(line.slice(1).trim());
+      // The value is the next line, when there is one that isn't itself a label.
+      const next = lines[i + 1];
+      const value = next && !next.startsWith("◗") ? (i++, esc(next)) : "";
+      out.push(`<p class="ritual-do"><span class="micro-label">${label}</span>${value}</p>`);
+    } else if (out.length === 0) {
+      out.push(`<p class="reading-h">${esc(line)}</p>`);
     } else {
-      out.push(`<p class="reading">${esc(line)}</p>`);
+      out.push(`<p>${esc(line)}</p>`);
     }
-  });
-  return out.join("");
+  }
+  return `<div class="reading">${out.join("")}</div>`;
 }
 
 /* Rituals: same verbatim treatment as the readings, plus numbered steps
@@ -123,7 +136,9 @@ function ritualContent(ritual, marks = {}, lead = null, done = new Set()) {
    refresh on today, and the moment a reading is replaced at an ingress. */
 function section(title, body, kind) {
   const k = kind ? ` data-kind="${kind}"` : "";
-  return `<details class="entry"${k}><summary><h3>${title}</h3><span class="disclose" aria-hidden="true">＋</span></summary><div class="entry-body">${body}</div></details>`;
+  return `<details class="entry"${k}><summary><h3 class="reading-title">${title}</h3>` +
+    `<span class="disclose" aria-hidden="true">＋</span></summary>` +
+    `<div class="entry-body">${body}</div></details>`;
 }
 
 const fmtDay = (date) =>
@@ -344,6 +359,8 @@ function render() {
   } else if (natal.invalid) {
     transit = `<p class="transit-note">This profile's birth data could not be interpreted (${esc(natal.reason)}). Edit the profile to fix it.</p>`;
   } else {
+    // The design heads this panel with its own micro-label, like the others.
+    transit = `<p class="micro-label">Transit</p>`;
     if (day.house != null) {
       transit += `<p class="transit-house">${houseLine(day)}</p>`;
     }
@@ -369,7 +386,10 @@ function render() {
   if (state.showAffirmations !== false && day.affirmations) {
     const list = (CONTENT.newMoonAffirmations || {})[day.affirmations.house] || [];
     const texts = list.filter((t) => t && String(t).trim());
-    affHTML = texts.map((t) => `<p class="affirmation">‘${esc(t)}’</p>`).join("");
+    // Label, then quotes divided by hairlines — the design's shape.
+    affHTML = `<p class="micro-label">New moon affirmations</p>` +
+      texts.map((t) => `<p class="affirmation">‘${esc(t)}’</p>`)
+        .join(`<hr class="rule">`);
   }
   $("affirmations").innerHTML = affHTML;
 
