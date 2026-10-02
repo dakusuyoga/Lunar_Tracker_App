@@ -185,9 +185,14 @@ function nextEventsLine(day) {
    get picked up by the system emoji font and render as coloured tiles. */
 const glyph = (i) => `<span class="glyph">${SIGN_GLYPHS[i]}</span>`;
 
+/* The zodiac is named as a proper noun in the interface. The stored value
+   stays lowercase — it's a state key and a localStorage value, and
+   capitalising it would orphan every saved preference. Display only. */
+const modeLabel = () => (state.zodiacMode === "sidereal" ? "Sidereal" : "Tropical");
+
 function signLine(day) {
   const idx = day.moonSignIndex;
-  const plain = `Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${state.zodiacMode}`;
+  const plain = `Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${modeLabel()}`;
   const segs = day.signSegments;
   if (state.showTransitions === false || !segs || segs.length < 2) {
     return `${glyph(idx)} ${esc(plain)}`;
@@ -199,7 +204,7 @@ function signLine(day) {
         ? `${glyph(s.value)} ${esc(`${SIGNS[s.value]} after`)}`
         : `${glyph(s.value)} ${esc(`${SIGNS[s.value]} until ${fmtTime(s.to)}`)}`
     ).join(" · ");
-    return `${span} · ${esc(state.zodiacMode)}`;
+    return `${span} · ${esc(modeLabel())}`;
   }
 
   const active = activeSegment(segs, day.anchor);
