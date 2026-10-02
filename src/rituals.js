@@ -28,19 +28,25 @@ export async function fetchCompletions(userId, eventDate) {
   const { data, error } = await supabase
     .from("ritual_completions").select("ritual")
     .eq("user_id", userId).eq("event_date", eventDate);
+
   if (error) { console.warn("ritual fetch failed", error); return new Set(); }
   return new Set((data || []).map((r) => r.ritual));
 }
 
-export async function setCompletion(userId, ritual, instant, done) {
+export async function setCompletion(userId, ritual, instant, done, displayTz) {
   if (!supabase) return;
   const event_date = eventDateOf(instant);
   if (done) {
     // Upsert, not insert: marking something already marked is a no-op, not
     // a failure. A lost response on a bad connection would otherwise
     // surface an error for a write that actually succeeded.
+    //
+    // `display_tz` freezes where this was lived, exactly as check_ins does.
+    // Without it, any later conversion to a civil day would borrow the
+    // user's CURRENT location — so a ritual done in Vancouver would drift
+    // onto a different day once they moved to Toronto.
     const { error } = await supabase.from("ritual_completions").upsert(
-      { user_id: userId, ritual, event_utc: instant.toISOString() },
+      { user_id: userId, ritual, event_utc: instant.toISOString(), display_tz: displayTz },
       { onConflict: "user_id,ritual,event_date", ignoreDuplicates: true }
     );
     if (error && error.code !== "23505") throw error;

@@ -1026,7 +1026,7 @@ function wire() {
     if (done) ritualsDone.add(ritual); else ritualsDone.delete(ritual);
 
     try {
-      await setCompletion(account.id, ritual, instant, done);
+      await setCompletion(account.id, ritual, instant, done, state.location.timezone);
     } catch (err) {
       console.error("ritual toggle failed", err);
       btn.setAttribute("aria-pressed", String(!done));

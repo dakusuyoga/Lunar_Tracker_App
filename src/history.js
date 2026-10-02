@@ -24,17 +24,40 @@ const iso = (dt) => dt.toISODate();
 
 async function fetchMarks(firstISO, lastISO) {
   if (!supabase) return { checkIns: new Set(), rituals: new Set() };
+  /* The two tables key days differently on purpose: `checkin_date` is a
+     civil day in somebody's timezone, `event_date` identifies a lunation
+     in UTC. About a quarter of lunations fall on a different local day
+     than their UTC date, so placing a halo by `event_date` would mark a
+     day the user did nothing and leave the day they did it bare.
+
+     The grid is a view of the user's lived days, so rituals are placed by
+     converting `event_utc` through the timezone frozen on the row — where
+     they were when it happened, not where they are now. Widened by a day
+     either side so a lunation at the edge of the month isn't missed. */
+  const pad = (iso, days) =>
+    DateTime.fromISO(iso).plus({ days }).toISODate();
+
   const [ci, rc] = await Promise.all([
     supabase.from("check_ins").select("checkin_date")
       .eq("user_id", userId).gte("checkin_date", firstISO).lte("checkin_date", lastISO),
-    supabase.from("ritual_completions").select("event_date")
-      .eq("user_id", userId).gte("event_date", firstISO).lte("event_date", lastISO),
+    supabase.from("ritual_completions").select("event_utc, event_date, display_tz")
+      .eq("user_id", userId)
+      .gte("event_date", pad(firstISO, -1)).lte("event_date", pad(lastISO, 1)),
   ]);
   if (ci.error) console.warn("history: check-ins", ci.error);
   if (rc.error) console.warn("history: rituals", rc.error);
+
+  const rituals = new Set();
+  for (const r of rc.data || []) {
+    // Rows written before display_tz existed fall back to the current
+    // zone; that is the best available answer, not a correct one.
+    const zone = r.display_tz || tz;
+    rituals.add(DateTime.fromISO(r.event_utc).setZone(zone).toISODate());
+  }
+
   return {
     checkIns: new Set((ci.data || []).map((r) => r.checkin_date)),
-    rituals: new Set((rc.data || []).map((r) => r.event_date)),
+    rituals,
   };
 }
 
