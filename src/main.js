@@ -489,7 +489,9 @@ function render() {
      asynchronously so the daily view never waits on the network to draw;
      the card simply appears when the answer arrives. The outbox copy wins,
      because it exists before the row has reached Postgres. */
-  if (account) {
+  /* The toggle hides the card, never the data: the check-in itself is
+     untouched and still reachable from History. */
+  if (account && state.showRecordCard !== false) {
     const forDate = selectedDate;
     const queued = pendingFor(forDate);
     if (queued) {
@@ -497,12 +499,16 @@ function render() {
     } else {
       renderRecordCard(null, forDate, state.location.timezone);
       fetchCheckIn(account.id, forDate).then((row) => {
-        // Ignore a late reply for a date the user has already left.
-        if (row && selectedDate === forDate) {
+        // Ignore a late reply for a date the user has already left, or a
+        // card the user switched off while the request was in flight.
+        if (row && selectedDate === forDate && state.showRecordCard !== false) {
           renderRecordCard(row, forDate, state.location.timezone);
         }
       });
     }
+  } else {
+    // Switched off, or signed out: take down any card already drawn.
+    renderRecordCard(null, selectedDate, state.location.timezone);
   }
 
   /* Ritual toggles reflect the lunation on screen. Fetched once per
@@ -950,6 +956,7 @@ function openLocationForm() {
   $("opt-affirmations").checked = state.showAffirmations !== false;
   $("opt-transitions").checked = state.showTransitions !== false;
   $("opt-both-readings").checked = state.showBothReadings === true;
+  $("opt-record-card").checked = state.showRecordCard !== false;
   settingsDialog.showModal();
 }
 
@@ -1184,6 +1191,11 @@ function wire() {
   });
   $("opt-both-readings").addEventListener("change", (e) => {
     state.showBothReadings = e.target.checked;
+    persist();
+    render();
+  });
+  $("opt-record-card").addEventListener("change", (e) => {
+    state.showRecordCard = e.target.checked;
     persist();
     render();
   });

@@ -57,6 +57,7 @@ function defaults() {
     showAffirmations: true,
     showTransitions: true,
     showBothReadings: false,
+    showRecordCard: true,
   };
 }
 
