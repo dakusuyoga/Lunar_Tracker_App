@@ -29,18 +29,34 @@ function phaseKey(angle) {
    the metadata a later recompute needs. Degrees are the only mode-agnostic
    representation — a stored word like "scorpio" is already committed to
    one zodiac and cannot be flipped. */
+/* Two kinds of fact, and they come from different places.
+
+   Properties of the CHART are read from the stored natal data: the birth
+   instant, the birth-epoch ayanāṁśa, whether a time was known, and the
+   raw longitudes.
+
+   Properties of the READING — which house systems were used, and which
+   version of the code produced the numbers — must describe the code that
+   just ran, not whatever was recorded when the chart was first saved.
+   Inheriting them stamped `house_system: "placidus"` onto rows whose
+   sidereal house had actually been computed as whole sign, which is
+   precisely the mislabelling that makes old rows uncomparable. */
+const HOUSE_SYSTEMS = { tropical: "placidus", sidereal: "whole_sign" };
+const ALGO_VERSION = 2;   // 1 = sidereal houses as shifted Placidus
+
 function snapshotOf(profileRow) {
   const n = profileRow?.natal_data || {};
   return {
     natal_utc: n.natal_utc,
     ayanamsa: n.ayanamsa,
     time_unknown: n.time_unknown,
-    house_system: n.house_system || { tropical: "placidus", sidereal: "whole_sign" },
-    algo_version: n.algo_version || 1,
     natal_version: profileRow?.natal_version || 1,
     points: n.points,
     angles: n.angles || null,
     cusps: n.cusps || null,
+
+    house_system: HOUSE_SYSTEMS,
+    algo_version: ALGO_VERSION,
   };
 }
 
@@ -101,6 +117,63 @@ export async function saveCheckIn(row) {
   queue({ table: "check_ins", row, onConflict: "user_id,checkin_date" });
   const result = await flush(supabase);
   return { row, synced: result.kept === 0 };
+}
+
+/* ── Reconcile ───────────────────────────────────────────────────────
+   Fills in the moon-context of rows that were saved without it.
+
+   The human answers are irreplaceable and the astronomy is always
+   recomputable, so a cold engine never blocks a save — it writes the row
+   with `moon_context_pending` and this picks it up afterwards. The anchor
+   is the row's own `created_at`, so the result is identical to what a warm
+   save would have produced at that instant.
+
+   Two boundaries matter. It writes ONLY moon-context columns and the flag,
+   never the human answers — the database enforces that too, via the
+   immutability trigger. And it keys on `pending = true`, which is also
+   what the RLS update policy requires, so a settled row cannot be touched
+   by this path at all. */
+export async function backfillPending(userId, natal, profileRow) {
+  if (!supabase || !natal || natal.invalid) return { filled: 0 };
+
+  const { data, error } = await supabase
+    .from("check_ins").select("checkin_date, created_at")
+    .eq("user_id", userId).eq("moon_context_pending", true);
+  if (error) { console.warn("backfill query failed", error); return { filled: 0 }; }
+  if (!data || !data.length) return { filled: 0 };
+
+  let filled = 0;
+  for (const row of data) {
+    const instant = new Date(row.created_at);
+    const jd = jdFromDate(instant);
+    const angle = moonSunElongation(jd);
+    const trop = moonContextAt(instant, natal, "tropical");
+    const sid = moonContextAt(instant, natal, "sidereal");
+
+    /* The snapshot is written now rather than then, because a pending row
+       never had one. If the chart was edited in between, this records the
+       chart that actually produced these numbers — which is what the
+       snapshot is for. */
+    const patch = {
+      moon_phase: phaseKey(angle),
+      phase_angle: Number(angle.toFixed(4)),
+      moon_longitude: Number(trop.moonLonTropical.toFixed(6)),
+      moon_natal_sign_tropical: trop.sign,
+      moon_natal_sign_sidereal: sid.sign,
+      moon_natal_house_tropical: trop.house,
+      moon_natal_house_sidereal: sid.house,
+      conjunctions_tropical: trop.conjunctions,
+      conjunctions_sidereal: sid.conjunctions,
+      natal_snapshot: snapshotOf(profileRow),
+      moon_context_pending: false,
+    };
+
+    const res = await supabase.from("check_ins").update(patch)
+      .eq("user_id", userId).eq("checkin_date", row.checkin_date);
+    if (res.error) console.warn("backfill update failed", row.checkin_date, res.error);
+    else filled++;
+  }
+  return { filled };
 }
 
 export async function fetchCheckIn(userId, dateISO) {

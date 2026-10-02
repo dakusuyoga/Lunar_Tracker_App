@@ -18,7 +18,7 @@ import {
 } from "./profile.js";
 import { initCheckIn, syncTodayState } from "./checkinui.js";
 import { startOutbox, pendingFor } from "./outbox.js";
-import { fetchCheckIn } from "./checkin.js";
+import { fetchCheckIn, backfillPending } from "./checkin.js";
 import { renderRecordCard } from "./recordcard.js";
 import { toggleMarkup, fetchCompletions, setCompletion, eventDateOf } from "./rituals.js";
 import { initHistory, openHistory } from "./history.js";
@@ -644,6 +644,14 @@ async function applySession(session) {
     timezone: state.location.timezone,
     onPick: (dateISO) => setDate(dateISO),
   });
+
+  /* Any check-in saved while the engine was cold gets its moon-context
+     now. Runs once per session, in the background: it changes nothing the
+     user is looking at, and a failure simply leaves the rows pending for
+     next time. */
+  backfillPending(account.id, activeNatal(), profileRow)
+    .then(({ filled }) => { if (filled) console.info(`backfilled ${filled} check-in(s)`); })
+    .catch((e) => console.warn("backfill skipped", e));
 }
 
 function startLiveClock() {
