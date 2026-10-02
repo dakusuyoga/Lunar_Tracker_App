@@ -474,10 +474,17 @@
   <div id="dialog-chart" class="glass dialog-card">
     <p class="dialog-head"><span class="dialog-title">Your chart</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
 
+    <!-- The chart at rest: current values, read-only, with Edit revealing
+         the form below. The static export only captured the edit branch of
+         this dialog, so this markup is rebuilt from the design source — a
+         div rather than the exported <ul>, since it holds label/value
+         pairs and not a list of profiles. -->
     <div id="profile-list-view" hidden>
-      <ul id="profile-list" class="profile-list"></ul>
-      <button type="button" id="new-profile" class="btn btn-ghost">New profile</button>
-      <button type="button" id="close-profiles" class="btn btn-ghost">Close</button>
+      <div id="profile-list" class="chart-view"></div>
+      <div class="dialog-actions">
+        <button type="button" id="new-profile" class="btn btn-primary">Edit</button>
+        <button type="button" id="close-profiles" class="btn btn-ghost">Close</button>
+      </div>
     </div>
 
     <form id="profile-form" class="form">

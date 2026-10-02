@@ -727,56 +727,51 @@ let editingProfileId = null;   // null = creating
 let pfPickedPlace = null;      // {displayName, latitude, longitude} from search
 let pfTzAuto = true;
 
+/* The chart at rest. The design shows the stored values as a read-only
+   card — name, date, time, then a rule, then place with its timezone
+   beneath — and keeps the form behind an Edit button. That is gentler than
+   opening a form full of inputs every time someone wants to check what
+   their birth time is set to. */
 function renderProfileList() {
-  const ul = $("profile-list");
-  ul.innerHTML = "";
-  if (!state.profiles.length) {
-    ul.innerHTML = `<li class="empty">No profiles yet — create one below.</li>`;
-    return;
-  }
-  for (const p of state.profiles) {
-    const li = document.createElement("li");
-    const info = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "p-name" + (p.id === state.activeProfileId ? " active" : "");
-    name.textContent = p.name;
-    const meta = document.createElement("div");
-    meta.className = "p-meta";
-    meta.textContent = `${p.birthDate}${p.timeUnknown ? " · time unknown" : ` · ${p.birthTime}`} · ${p.place.displayName.split(",")[0]}`;
-    info.append(name, meta);
-    const actions = document.createElement("div");
-    actions.className = "p-actions";
-    const use = document.createElement("button");
-    use.type = "button"; use.textContent = "Use";
-    use.addEventListener("click", () => {
-      state.activeProfileId = p.id;
-      persist(); renderProfileList(); render();
-    });
-    const edit = document.createElement("button");
-    edit.type = "button"; edit.textContent = "Edit";
-    edit.addEventListener("click", () => openProfileForm(p));
-    const del = document.createElement("button");
-    del.type = "button"; del.textContent = "Delete";
-    del.addEventListener("click", () => {
-      if (!window.confirm(`Delete profile “${p.name}”? This cannot be undone.`)) return;
-      state.profiles = state.profiles.filter((x) => x.id !== p.id);
-      if (state.activeProfileId === p.id) {
-        state.activeProfileId = state.profiles.length ? state.profiles[0].id : null;
-      }
-      persist(); renderProfileList(); render();
-    });
-    actions.append(use, edit, del);
-    li.append(info, actions);
-    ul.appendChild(li);
-  }
+  const box = $("profile-list");
+  const p = state.profiles[0];
+  if (!p) { box.innerHTML = ""; return; }
+
+  const date = DateTime.fromISO(p.birthDate).toFormat("d LLLL yyyy");
+  const time = p.timeUnknown ? "Not known" : p.birthTime;
+
+  /* "(auto)" is only truthful when the zone really is the one the
+     coordinates imply — so derive it rather than assert it. */
+  const auto = timezoneFor(p.place.latitude, p.place.longitude) === p.timezone;
+
+  box.innerHTML =
+    `<p class="datum"><span class="micro-label">Profile name</span>` +
+      `<span class="value">${esc(p.name)}</span></p>` +
+    `<div class="field-row">` +
+      `<p class="datum"><span class="micro-label">Birth date</span>` +
+        `<span class="value">${esc(date)}</span></p>` +
+      `<p class="datum"><span class="micro-label">Birth time</span>` +
+        `<span class="value">${esc(time)}</span></p>` +
+    `</div>` +
+    `<hr class="rule">` +
+    `<p class="datum"><span class="micro-label">Birth place</span>` +
+      `<span class="value">${esc(p.place.displayName)}</span>` +
+      `<span class="helper">${esc(p.timezone)}${auto ? " (auto)" : ""}</span></p>`;
 }
 
-/* V2 has a single chart, so the form is the only view. The list markup
-   stays in the DOM but is never shown — kept rather than deleted so the
-   design's file isn't diverged from by hand. */
-function showProfileView() {
-  $("profile-list-view").hidden = true;
-  $("profile-form").hidden = false;
+/* Two states in one dialog: the chart at rest, and the form. */
+function showProfileView(formMode) {
+  $("profile-list-view").hidden = formMode;
+  $("profile-form").hidden = !formMode;
+}
+
+/* "Your chart" opens the card; first run and Edit open the form. */
+function openChartDialog() {
+  const p = state.profiles[0];
+  if (!p) { openProfileForm(null); return; }
+  renderProfileList();
+  showProfileView(false);
+  if (!profileDialog.open) profileDialog.showModal();
 }
 
 function openProfileForm(profile) {
@@ -1064,13 +1059,8 @@ function wire() {
       setMenu(false);
       const dlg = $(item.dataset.dialog);
       if (!dlg) return;
-      /* One chart per account, so "Your chart" opens that chart — there is
-         no list to choose from. The V1 list view is a multi-profile relic;
-         showing it left the dialog nearly empty, which is not the design. */
-      if (dlg.id === "profile-dialog") {
-        openProfileForm(state.profiles[0] || null);
-        return;
-      }
+      // One chart per account: "Your chart" opens that chart's card.
+      if (dlg.id === "profile-dialog") { openChartDialog(); return; }
       if (dlg.id === "settings-dialog") { openLocationForm(); return; }
       if (dlg.id === "dialog-history" && account) {
         openHistory({
@@ -1128,11 +1118,14 @@ function wire() {
   $("location-label").addEventListener("click", openLocationForm);
 
   // Profile dialog
-  $("new-profile").addEventListener("click", () => openProfileForm(null));
+  // Repurposed by the design as "Edit": there is one chart, so editing it
+  // is the only thing this button can mean.
+  $("new-profile").addEventListener("click", () => openProfileForm(state.profiles[0] || null));
   $("close-profiles").addEventListener("click", () => profileDialog.close());
   $("pf-cancel").addEventListener("click", () => {
-    // Cancel closes: with a single chart there is no list to fall back to.
-    profileDialog.close();
+    // Cancel returns to the card when there is a chart to return to.
+    if (state.profiles.length) { renderProfileList(); showProfileView(false); }
+    else profileDialog.close();
   });
   $("profile-form").addEventListener("submit", pfSubmit);
   $("pf-time-unknown").addEventListener("change", (e) => {

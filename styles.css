@@ -881,3 +881,10 @@ span.mark { cursor: default; }
 }
 .ritual-toggle:hover { border-color: var(--gold); }
 .ritual-toggle.is-done { background: var(--gold-wash); border-color: var(--gold); }
+
+/* The chart at rest — label/value pairs, not a form. */
+.chart-view .datum { margin-top: 18px; }
+.chart-view .datum:first-child { margin-top: 0; }
+.chart-view .field-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.chart-view .field-row .datum { flex: 1 1 140px; }
+.chart-view .helper { display: block; margin-top: 5px; }
