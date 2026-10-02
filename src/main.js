@@ -84,10 +84,17 @@ function contentOr(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line.startsWith("◗")) {
-      const label = esc(line.slice(1).trim());
-      // The value is the next line, when there is one that isn't itself a label.
+      /* The content is authored two ways: the label alone on its line with
+         the value beneath, or both on one line ("◗ Good for… Socializing…").
+         Split on the label's own terminator first, so the second form doesn't
+         set a whole sentence in the gold uppercase label style. */
+      const body = line.slice(1).trim();
+      const split = /^([^…:]{0,24}(?:…|\.\.\.|:))\s*(.*)$/s.exec(body);
+      let label = esc(split ? split[1].trim() : body);
+      let value = split ? esc(split[2].trim()) : "";
+      // Otherwise the value is the next line, when it isn't itself a label.
       const next = lines[i + 1];
-      const value = next && !next.startsWith("◗") ? (i++, esc(next)) : "";
+      if (!value && next && !next.startsWith("◗")) { i++; value = esc(next); }
       out.push(`<p class="ritual-do"><span class="micro-label">${label}</span>${value}</p>`);
     } else if (out.length === 0) {
       out.push(`<p class="reading-h">${esc(line)}</p>`);
