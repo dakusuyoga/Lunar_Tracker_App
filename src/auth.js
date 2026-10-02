@@ -197,10 +197,12 @@ export function initAuth() {
     });
   }
 
-  const toggle = card.querySelector('[data-action="toggle-password"]');
-  if (toggle) {
+  /* Password and Confirm each carry their own eye, so each toggle acts on
+     the input it sits beside rather than on a field named here. */
+  for (const toggle of card.querySelectorAll('[data-action="toggle-password"]')) {
+    const input = toggle.parentElement.querySelector("input");
+    if (!input) continue;
     toggle.addEventListener("click", () => {
-      const input = $("login-password");
       const showing = input.type === "text";
       input.type = showing ? "password" : "text";
       toggle.setAttribute("aria-pressed", String(!showing));
