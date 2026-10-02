@@ -771,9 +771,12 @@ function renderProfileList() {
   }
 }
 
-function showProfileView(formMode) {
-  $("profile-list-view").hidden = formMode;
-  $("profile-form").hidden = !formMode;
+/* V2 has a single chart, so the form is the only view. The list markup
+   stays in the DOM but is never shown — kept rather than deleted so the
+   design's file isn't diverged from by hand. */
+function showProfileView() {
+  $("profile-list-view").hidden = true;
+  $("profile-form").hidden = false;
 }
 
 function openProfileForm(profile) {
@@ -1061,7 +1064,13 @@ function wire() {
       setMenu(false);
       const dlg = $(item.dataset.dialog);
       if (!dlg) return;
-      if (dlg.id === "profile-dialog") { renderProfileList(); showProfileView(false); }
+      /* One chart per account, so "Your chart" opens that chart — there is
+         no list to choose from. The V1 list view is a multi-profile relic;
+         showing it left the dialog nearly empty, which is not the design. */
+      if (dlg.id === "profile-dialog") {
+        openProfileForm(state.profiles[0] || null);
+        return;
+      }
       if (dlg.id === "settings-dialog") { openLocationForm(); return; }
       if (dlg.id === "dialog-history" && account) {
         openHistory({
@@ -1122,8 +1131,8 @@ function wire() {
   $("new-profile").addEventListener("click", () => openProfileForm(null));
   $("close-profiles").addEventListener("click", () => profileDialog.close());
   $("pf-cancel").addEventListener("click", () => {
-    if (state.profiles.length) showProfileView(false);
-    else profileDialog.close();
+    // Cancel closes: with a single chart there is no list to fall back to.
+    profileDialog.close();
   });
   $("profile-form").addEventListener("submit", pfSubmit);
   $("pf-time-unknown").addEventListener("change", (e) => {
