@@ -882,15 +882,26 @@ span.mark { cursor: default; }
 .ritual-toggle:hover { border-color: var(--gold); }
 .ritual-toggle.is-done { background: var(--gold-wash); border-color: var(--gold); }
 
-/* The chart at rest — label/value pairs, not a form.
-   Spacing comes from the column's own gap rather than margins on each
-   datum: a per-item margin with :first-child zeroing it breaks down
-   inside .field-row, where the second column keeps its margin and drops
-   below the first. */
-.chart-view { display: flex; flex-direction: column; gap: 18px; }
+/* The chart at rest — label/value pairs inside their own panel, not a
+   form. Geometry taken from the design source: a solid reading surface
+   inset from the glass dialog, so the values read as a record rather than
+   as fields waiting to be filled in. */
+.chart-view {
+  margin-top: 24px;
+  background: var(--navy-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+/* Spacing comes from the column's gap, not per-item margins: a margin with
+   :first-child zeroing it breaks inside .field-row, where the second
+   column keeps its margin and drops below the first. */
 .chart-view .datum { margin: 0; }
 .chart-view .field-row { display: flex; gap: 24px; flex-wrap: wrap; margin: 0; }
 .chart-view .field-row .datum { flex: 1 1 150px; }
-.chart-view .rule { margin: 2px 0; }
+.chart-view .rule { margin: 0; }
 .chart-view .helper { display: block; margin-top: 6px; }
 #profile-list-view .dialog-actions { margin-top: 24px; }
