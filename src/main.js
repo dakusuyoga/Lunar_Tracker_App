@@ -220,26 +220,41 @@ function signLine(day) {
    from the segments rather than appended to the anchor's house — on a past
    or future day the anchor sits in one segment while the line has to name
    the house the day *starts* in. */
+/* In Sidereal the houses are whole sign, so a house boundary IS a sign
+   boundary and both lines would quote the same clock time. The house line
+   drops its times in that case — the sign line above already carries them,
+   and the house number is the only thing this line adds. */
+function housesFollowSigns(day) {
+  const h = day.houseSegments, s = day.signSegments;
+  if (!h || !s || h.length !== s.length) return false;
+  return h.every((seg, i) => Math.abs(seg.from - s[i].from) < 1000);
+}
+
 function houseLine(day) {
   const segs = day.houseSegments;
   const plain = `Moon transiting the ${ORDINALS[day.house]} house`;
   if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
 
+  const echoes = housesFollowSigns(day);
+
   if (!day.isToday) {
     const span = segs.map((s, i) =>
       i === segs.length - 1
-        ? `${ORDINALS[s.value]} after`
-        : `${ORDINALS[s.value]} until ${fmtTime(s.to)}`
-    ).join(" · ");
+        ? `${ORDINALS[s.value]}${echoes ? "" : " after"}`
+        : `${ORDINALS[s.value]}${echoes ? "" : ` until ${fmtTime(s.to)}`}`
+    ).join(echoes ? ", then the " : " · ");
     return esc(`Moon transiting the ${span}`);
   }
 
   const active = activeSegment(segs, day.anchor);
   const next = segs[segs.indexOf(active) + 1];
+  const head = esc(`Moon transiting the ${ORDINALS[active.value]} house`);
+  // Nothing left to say once the time is dropped and the change has passed.
+  if (echoes && !next) return head;
   const note = next
-    ? `→ ${ORDINALS[next.value]} from ${fmtTime(next.from)}`
+    ? `→ ${ORDINALS[next.value]}${echoes ? "" : ` from ${fmtTime(next.from)}`}`
     : `since ${fmtTime(active.from)}`;
-  return `${esc(`Moon transiting the ${ORDINALS[active.value]} house`)} <span class="ingress">${esc(note)}</span>`;
+  return `${head} <span class="ingress">${esc(note)}</span>`;
 }
 
 /* The active segment is the one containing the anchor; on past/future dates
