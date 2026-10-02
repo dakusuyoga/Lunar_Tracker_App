@@ -10,7 +10,7 @@
    identity. Cosmetic preferences stay per-device; anything that changes
    what gets stored belongs to the account. */
 import { supabase } from "./supabase.js";
-import { DEFAULT_LOCATION } from "./store.js";
+import { initialLocation } from "./store.js";
 
 /* Database row → the shape compute.js and the forms already expect. */
 export function rowToProfile(row) {
@@ -31,7 +31,9 @@ export function rowToProfile(row) {
 }
 
 export function rowToLocation(row) {
-  if (!row || !row.display_tz) return { ...DEFAULT_LOCATION };
+  // No stored location yet: fall back to the device's zone so the local
+  // day is right even before the user has chosen a place.
+  if (!row || !row.display_tz) return initialLocation();
   return {
     displayName: row.display_place,
     latitude: row.display_lat,

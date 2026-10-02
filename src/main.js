@@ -884,6 +884,12 @@ async function pfSubmit(ev) {
   profileDialog.close();
   showScreen("screen-daily");
   render();
+
+  /* A new account has a timezone (inferred from the device) but no place,
+     and the place is what moonrise, moonset, sunrise and sunset are
+     computed from. Ask once, right after the chart exists — rather than
+     quietly showing someone in Hanoi the times for Toronto. */
+  if (!profileRow.display_tz) openLocationForm();
 }
 
 /* ── Display-location form ──────────────────────────────────────── */
