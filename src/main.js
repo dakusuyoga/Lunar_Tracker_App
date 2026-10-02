@@ -20,6 +20,7 @@ import { initCheckIn, syncTodayState } from "./checkinui.js";
 import { startOutbox, pendingFor } from "./outbox.js";
 import { fetchCheckIn, backfillPending } from "./checkin.js";
 import { renderRecordCard } from "./recordcard.js";
+import { initRecordScreen } from "./recordscreen.js";
 import { toggleMarkup, fetchCompletions, setCompletion, eventDateOf } from "./rituals.js";
 import { initHistory, openHistory } from "./history.js";
 
@@ -643,6 +644,12 @@ async function applySession(session) {
     userId: account.id,
     timezone: state.location.timezone,
     onPick: (dateISO) => setDate(dateISO),
+  });
+
+  initRecordScreen({
+    userId: () => account.id,
+    timezone: () => state.location.timezone,
+    selectedDate: () => selectedDate,
   });
 
   /* Any check-in saved while the engine was cold gets its moon-context
