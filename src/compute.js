@@ -125,11 +125,33 @@ function computeNatal(profile) {
   };
 }
 
-// Natal cusps in the active zodiac mode (sidereal uses the natal ayanāṁśa).
+/* Natal house cusps in the active zodiac mode.
+
+   The two modes use *different house systems*, not one system relabelled:
+
+   - tropical → Placidus, the Western convention: unequal houses derived
+     from the birth latitude and sidereal time.
+   - sidereal → whole sign, as sidereal and Jyotish practice uses: the sign
+     holding the Ascendant is the 1st house in its entirety, the next sign
+     is the 2nd, and so on. Cusps fall on sign boundaries.
+
+   An earlier version subtracted the ayanāṁśa from the Placidus cusps,
+   which keeps the Western frame and merely renames it — the house sizes
+   stayed unequal and the boundaries stayed off the sign lines. That is not
+   how a sidereal chart is read.
+
+   A side effect worth knowing: with whole sign, a planet's house changes
+   exactly when its sign changes, so in sidereal mode house ingresses and
+   sign ingresses coincide by definition. Houses also stop depending on
+   latitude, so extreme latitudes no longer distort them. */
 export function modalCusps(natal, mode) {
   if (!natal || !natal.cusps) return null;
-  if (mode === "sidereal") return natal.cusps.map((c) => norm360(c - natal.ayanamsa));
-  return natal.cusps.slice();
+  if (mode !== "sidereal") return natal.cusps.slice();
+
+  const asc = natal.angles && natal.angles.Ascendant;
+  if (asc === undefined) return null;      // no birth time, no Ascendant
+  const firstSign = Math.floor(norm360(asc - natal.ayanamsa) / 30);
+  return Array.from({ length: 12 }, (_, i) => ((firstSign + i) % 12) * 30);
 }
 
 /* ── Daily view ──────────────────────────────────────────────────── */

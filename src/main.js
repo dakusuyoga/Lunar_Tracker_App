@@ -856,7 +856,12 @@ async function pfSubmit(ev) {
       natal_utc: natal.utcISO,
       ayanamsa: natal.ayanamsa,
       time_unknown: natal.timeUnknown,
-      house_system: "placidus",
+      /* Per mode, because they genuinely differ: the house system is a
+         property of how a chart is read, not of the chart itself. Recorded
+         so a later recompute knows which convention produced a stored
+         house, and can tell rows written before this split apart from
+         rows written after. */
+      house_system: { tropical: "placidus", sidereal: "whole_sign" },
       algo_version: 1,
       points: natal.points,
       angles: natal.angles || null,

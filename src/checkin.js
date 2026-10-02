@@ -35,7 +35,7 @@ function snapshotOf(profileRow) {
     natal_utc: n.natal_utc,
     ayanamsa: n.ayanamsa,
     time_unknown: n.time_unknown,
-    house_system: n.house_system || "placidus",
+    house_system: n.house_system || { tropical: "placidus", sidereal: "whole_sign" },
     algo_version: n.algo_version || 1,
     natal_version: profileRow?.natal_version || 1,
     points: n.points,
