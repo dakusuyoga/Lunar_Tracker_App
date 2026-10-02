@@ -753,6 +753,7 @@ function renderProfileList() {
   box.innerHTML =
     `<p class="datum"><span class="micro-label">Profile name</span>` +
       `<span class="value">${esc(p.name)}</span></p>` +
+    `<hr class="rule">` +
     `<div class="field-row">` +
       `<p class="datum"><span class="micro-label">Birth date</span>` +
         `<span class="value">${esc(date)}</span></p>` +
