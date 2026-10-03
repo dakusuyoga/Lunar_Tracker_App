@@ -193,8 +193,28 @@ export const DATE_BIRTH = { day: "numeric", month: "long", year: "numeric" };
 export const MONTH_YEAR = { month: "long", year: "numeric" };
 export const TIME_HM = { hour: "numeric", minute: "2-digit" };
 
+/* House style: weekday and month start with a capital, in every language.
+
+   Note this is a deliberate departure in Russian, which lowercases both —
+   "суббота, 3 октября" is the orthographically correct form. It is done
+   because these names head a screen, and it is applied here, once, so the
+   choice is visible in one place rather than re-decided per call site. To
+   go back to correct Russian, drop the capitalize step below.
+
+   Built from toLocaleParts rather than by upper-casing the formatted
+   string: only the `weekday` and `month` parts are touched, so a locale
+   that puts a literal or a numeral first is unaffected, and nothing else
+   in the string — "г.", an ordinal suffix — gets capitalized by accident. */
+const capitalizeFirst = (str) =>
+  str ? str.charAt(0).toLocaleUpperCase() + str.slice(1) : str;
+
 export const fmtDate = (dt, opts = DATE_FULL, lang = currentLang()) =>
-  dt.setLocale(lang).toLocaleString(opts);
+  dt.setLocale(lang).toLocaleParts(opts)
+    .map((part) =>
+      part.type === "weekday" || part.type === "month"
+        ? capitalizeFirst(part.value)
+        : part.value)
+    .join("");
 
 /* English renders "9:45 PM"; the app's typography wants it lowercase.
    Russian is a 24-hour locale with no marker to lowercase, so this is a
