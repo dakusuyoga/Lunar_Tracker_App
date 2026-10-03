@@ -23,6 +23,7 @@ import { renderRecordCard } from "./recordcard.js";
 import { initRecordScreen } from "./recordscreen.js";
 import { toggleMarkup, fetchCompletions, setCompletion, eventDateOf } from "./rituals.js";
 import { initHistory, openHistory } from "./history.js";
+import { exportMyData, deleteAccount } from "./account.js";
 
 /* Which ceremonies are already marked for the lunation currently on
    screen. Loaded per lunation, not per day — a ritual window spans two
@@ -709,6 +710,83 @@ async function applySession(session) {
     .catch((e) => console.warn("backfill skipped", e));
 }
 
+/* ── V2-D: Your data ─────────────────────────────────────────────────
+   Export is a plain download. Deletion is deliberately awkward: the
+   button only reveals a confirmation, and that confirmation requires
+   typing a word rather than clicking again — because the one thing a
+   second button cannot distinguish is a deliberate choice from a
+   mis-click on the first one, and this action has no undo. */
+function wireDataDialog() {
+  const dlg = $("dialog-data");
+  if (!dlg) return;
+
+  const note = dlg.querySelector(".data-note");
+  const errorEl = dlg.querySelector(".data-error");
+  const confirmBox = dlg.querySelector(".danger-confirm");
+  const startRow = dlg.querySelector(".danger-start");
+  const input = $("delete-confirm");
+  const goBtn = dlg.querySelector('[data-action="delete-confirm"]');
+
+  const reset = () => {
+    confirmBox.hidden = true;
+    startRow.hidden = false;
+    input.value = "";
+    goBtn.disabled = true;
+    errorEl.hidden = true;
+    note.hidden = true;
+  };
+  dlg.addEventListener("close", reset);
+
+  dlg.querySelector('[data-action="export-data"]').addEventListener("click", async (e) => {
+    if (!account) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = "Collecting…";
+    try {
+      const { checkIns, rituals } = await exportMyData(account.id);
+      note.textContent = `Downloaded — ${checkIns} check-in${checkIns === 1 ? "" : "s"}` +
+        ` and ${rituals} ritual mark${rituals === 1 ? "" : "s"}.`;
+      note.hidden = false;
+    } catch (err) {
+      console.warn("export failed", err);
+      note.textContent = "Couldn't build the export just now. Check your connection and try again.";
+      note.hidden = false;
+    }
+    btn.disabled = false;
+    btn.textContent = was;
+  });
+
+  dlg.querySelector('[data-action="delete-start"]').addEventListener("click", () => {
+    startRow.hidden = true;
+    confirmBox.hidden = false;
+    input.focus();
+  });
+  dlg.querySelector('[data-action="delete-cancel"]').addEventListener("click", reset);
+
+  input.addEventListener("input", () => {
+    goBtn.disabled = input.value.trim().toUpperCase() !== "DELETE";
+  });
+
+  goBtn.addEventListener("click", async () => {
+    goBtn.disabled = true;
+    goBtn.textContent = "Deleting…";
+    errorEl.hidden = true;
+    try {
+      await deleteAccount();
+      /* Everything local is already cleared; a reload is the honest way
+         back to a signed-out app with no stale state in memory. */
+      window.location.reload();
+    } catch (err) {
+      console.error("account deletion failed", err);
+      errorEl.textContent = "Couldn't delete the account. Nothing was removed — try again, or get in touch.";
+      errorEl.hidden = false;
+      goBtn.disabled = false;
+      goBtn.textContent = "Delete everything";
+    }
+  });
+}
+
 function startLiveClock() {
   let lastToday = todayISO();
   const tick = () => {
@@ -1164,6 +1242,8 @@ function wire() {
       setMenu(false);
       await signOut();   // onAuthStateChange returns us to the login screen
     });
+
+  wireDataDialog();
 
   $("location-label").addEventListener("click", openLocationForm);
 

@@ -920,3 +920,20 @@ span.mark { cursor: default; }
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   overflow: hidden;
 }
+
+/* ------------------------------------------ 18. YOUR DATA (V2-D) */
+/* Destructive controls read as destructive, but only once the user has
+   asked for them — the entry point stays quiet so the dialog doesn't
+   look alarming on open. */
+.btn-danger-quiet { color: var(--danger); }
+.btn-danger {
+  background: var(--danger);
+  border-color: transparent;
+  color: #1a0d10;
+  font-weight: 600;
+}
+.btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+.danger-confirm { margin-top: 18px; }
+.danger-confirm .field { margin-top: 0; }
+.data-note, .data-error { display: block; margin-top: 12px; }
+.data-error { color: var(--danger); }

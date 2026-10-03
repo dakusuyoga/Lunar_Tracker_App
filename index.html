@@ -113,6 +113,7 @@
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history">History</button>
           <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog">Location</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display">Display</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-data">Your data</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-about">About</button>
           <hr class="rule">
           <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out">Sign out</button>
@@ -615,6 +616,39 @@
       <span class="switch-text"><span class="switch-title">Show your check-in on the daily view</span><span class="helper">The saved check-in card, shown on days you checked in. Turning it off hides the card &mdash; your check-ins are kept either way.</span></span>
       <input type="checkbox" class="switch" id="opt-record-card" name="opt-record-card" checked>
     </p>
+
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+  </div>
+</dialog>
+
+<!-- ====================================================== YOUR DATA -->
+<dialog id="dialog-data" class="dialog">
+  <div class="glass dialog-card">
+    <p class="dialog-head"><span class="dialog-title">Your data</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+
+    <p class="micro-label">Export</p>
+    <p class="helper">Everything on your account &mdash; your chart, every check-in with the sky it was saved under, and your ritual marks &mdash; as a single JSON file. Yours to keep, readable without this app.</p>
+    <p class="btn-row"><button type="button" class="btn btn-ghost" data-action="export-data">Download my data</button></p>
+    <p class="data-note helper" hidden></p>
+
+    <hr class="rule">
+
+    <p class="micro-label">Delete account</p>
+    <p class="helper">This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and <strong>cannot be undone</strong> &mdash; there is no copy for us to restore from. Download your data first if you want to keep it.</p>
+
+    <div class="danger-confirm" hidden>
+      <p class="field">
+        <label for="delete-confirm">Type <strong>DELETE</strong> to confirm</label>
+        <input type="text" id="delete-confirm" name="delete-confirm" autocomplete="off" spellcheck="false" placeholder="DELETE">
+      </p>
+      <p class="data-error helper" hidden></p>
+      <p class="btn-row">
+        <button type="button" class="btn btn-danger" data-action="delete-confirm" disabled>Delete everything</button>
+        <button type="button" class="btn btn-ghost" data-action="delete-cancel">Cancel</button>
+      </p>
+    </div>
+
+    <p class="btn-row danger-start"><button type="button" class="btn btn-ghost btn-danger-quiet" data-action="delete-start">Delete my account</button></p>
 
     <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
   </div>
