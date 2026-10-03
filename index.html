@@ -37,16 +37,16 @@
 <!-- ============================================================= APP -->
 <div id="app" hidden>
 
-  <p id="storage-notice" class="storage-notice" hidden>Your browser is blocking local storage, so check-ins can&rsquo;t be saved on this device.</p>
+  <p id="storage-notice" class="storage-notice" data-i18n="boot.storage" hidden>Your browser is blocking local storage, so check-ins can&rsquo;t be saved on this device.</p>
 
   <!-- --------------------------------------------------------- LOGIN -->
   <section id="screen-login" class="screen screen-centred" hidden>
     <div class="glass card-auth">
       <p class="wordmark"><svg width="20" height="20" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg><span class="brand">Lunar Tracker</span></p>
 
-      <div class="segmented" role="tablist" aria-label="Log in or sign up">
-        <button type="button" class="seg is-active" role="tab" aria-selected="true" data-auth="login">Log in</button>
-        <button type="button" class="seg" role="tab" aria-selected="false" data-auth="signup">Sign up</button>
+      <div class="segmented" role="tablist" aria-label="Log in or sign up" data-i18n-aria="auth.tablist">
+        <button type="button" class="seg is-active" role="tab" aria-selected="true" data-auth="login" data-i18n="auth.login">Log in</button>
+        <button type="button" class="seg" role="tab" aria-selected="false" data-auth="signup" data-i18n="auth.signup">Sign up</button>
       </div>
 
       <h1 class="display-title centred">Welcome back</h1>
@@ -54,21 +54,21 @@
 
       <form class="form" novalidate>
         <p class="field">
-          <label for="login-email">Email</label>
-          <input type="email" id="login-email" name="login-email" autocomplete="email" placeholder="you@example.com">
+          <label for="login-email" data-i18n="auth.email">Email</label>
+          <input type="email" id="login-email" name="login-email" autocomplete="email" placeholder="you@example.com" data-i18n-ph="auth.emailPlaceholder">
         </p>
         <p class="field">
-          <label for="login-password">Password</label>
+          <label for="login-password" data-i18n="auth.password">Password</label>
           <span class="input-affix">
             <input type="password" id="login-password" name="login-password" autocomplete="current-password" placeholder="••••••••••">
             <button type="button" class="affix-btn" data-action="toggle-password" aria-label="Show password" aria-pressed="false">
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M1 9s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"/><circle cx="9" cy="9" r="2.3"/></svg>
             </button>
           </span>
-          <span class="field-error" hidden>That password doesn&rsquo;t match this email. Try again, or reset it below.</span>
+          <span class="field-error" data-i18n="auth.badPassword" hidden>That password doesn&rsquo;t match this email. Try again, or reset it below.</span>
         </p>
         <p class="field" data-signup-only hidden>
-          <label for="login-confirm">Confirm password</label>
+          <label for="login-confirm" data-i18n="auth.confirm">Confirm password</label>
           <span class="input-affix">
             <input type="password" id="login-confirm" name="login-confirm" autocomplete="new-password" placeholder="••••••••••">
             <button type="button" class="affix-btn" data-action="toggle-password" aria-label="Show password" aria-pressed="false">
@@ -76,10 +76,10 @@
             </button>
           </span>
         </p>
-        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+        <button type="submit" class="btn btn-primary btn-block" data-i18n="auth.login">Log in</button>
       </form>
 
-      <p class="centred subtle-action"><button type="button" class="link-btn" data-auth="forgot">Forgot password?</button></p>
+      <p class="centred subtle-action"><button type="button" class="link-btn" data-auth="forgot" data-i18n="auth.forgot">Forgot password?</button></p>
     </div>
   </section>
 
@@ -117,12 +117,12 @@
           <hr class="rule">
           <button type="button" class="menu-item" role="menuitem" data-dialog="profile-dialog">Your chart</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history">History</button>
-          <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog">Location</button>
-          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display">Display</button>
-          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-data">Your data</button>
-          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-about">About</button>
+          <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog" data-i18n="menu.location">Location</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display" data-i18n="menu.display">Display</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-data" data-i18n="menu.data">Your data</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-about" data-i18n="menu.about">About</button>
           <hr class="rule">
-          <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out">Sign out</button>
+          <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out" data-i18n="menu.signOut">Sign out</button>
         </div>
       </div>
     </header>
@@ -132,18 +132,18 @@
       <div class="date-nav">
         <h1 id="date-display" class="display-title">Friday, August 7, 2026</h1>
         <div class="date-controls">
-          <label class="visually-hidden" for="date-input">Choose date</label>
+          <label class="visually-hidden" for="date-input" data-i18n="date.chooseDate">Choose date</label>
           <input type="date" id="date-input" name="date-input" value="2026-08-07">
-          <button type="button" id="prev-day" class="icon-btn" aria-label="Previous day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
-          <button type="button" id="next-day" class="icon-btn" aria-label="Next day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
-          <button type="button" id="today-btn" class="ghost-btn">Today</button>
-          <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar">
+          <button type="button" id="prev-day" class="icon-btn" aria-label="Previous day" data-i18n-aria="date.prev"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
+          <button type="button" id="next-day" class="icon-btn" aria-label="Next day" data-i18n-aria="date.next"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
+          <button type="button" id="today-btn" class="ghost-btn" data-i18n="date.today">Today</button>
+          <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar" data-i18n-aria="date.history">
             <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg>
           </button>
         </div>
-        <div class="segmented" role="group" aria-label="Zodiac system">
-          <button type="button" id="mode-tropical" class="seg">Tropical</button>
-          <button type="button" id="mode-sidereal" class="seg is-active" aria-pressed="true">Sidereal</button>
+        <div class="segmented" role="group" aria-label="Zodiac system" data-i18n-aria="zodiac.group">
+          <button type="button" id="mode-tropical" class="seg" data-i18n="zodiac.tropical">Tropical</button>
+          <button type="button" id="mode-sidereal" class="seg is-active" aria-pressed="true" data-i18n="zodiac.sidereal">Sidereal</button>
         </div>
       </div>
     </div>
@@ -488,7 +488,7 @@
 <!-- ==================================================== YOUR CHART -->
 <dialog id="profile-dialog" class="dialog">
   <div id="dialog-chart" class="glass dialog-card">
-    <p class="dialog-head"><span class="dialog-title">Your chart</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+    <p class="dialog-head"><span class="dialog-title">Your chart</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close" data-i18n-aria="btn.close">&times;</button></p>
 
     <!-- The chart at rest: current values, read-only, with Edit revealing
          the form below. The static export only captured the edit branch of
@@ -561,7 +561,7 @@
 <!-- ====================================================== LOCATION -->
 <dialog id="settings-dialog" class="dialog">
   <div id="dialog-location" class="glass dialog-card">
-    <p class="dialog-head"><span class="dialog-title">Location</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+    <p class="dialog-head"><span class="dialog-title">Location</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close" data-i18n-aria="btn.close">&times;</button></p>
 
     <form id="location-form" class="form">
       <p class="micro-label">Display location</p>
@@ -600,10 +600,10 @@
 <!-- ======================================================= DISPLAY -->
 <dialog id="dialog-display" class="dialog">
   <div class="glass dialog-card">
-    <p class="dialog-head"><span class="dialog-title">Display</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
-    <p class="micro-label">Language</p>
+    <p class="dialog-head"><span class="dialog-title" data-i18n="display.title">Display</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close" data-i18n-aria="btn.close">&times;</button></p>
+    <p class="micro-label" data-i18n="display.language">Language</p>
     <p class="switch-row lang-row">
-      <span class="switch-text"><span class="switch-title">Language</span><span class="helper">Readings and interface. Your check-ins are unaffected &mdash; they store codes, not words, so they read correctly in either language.</span></span>
+      <span class="switch-text"><span class="switch-title" data-i18n="display.language">Language</span><span class="helper" data-i18n="display.languageHelp">Readings and interface. Your check-ins are unaffected &mdash; they store codes, not words, so they read correctly in either language.</span></span>
       <span class="segmented" role="group" aria-label="Language">
         <button type="button" class="seg" data-lang="en">English</button>
         <button type="button" class="seg" data-lang="ru" lang="ru">Русский</button>
@@ -611,45 +611,45 @@
     </p>
     <hr class="rule">
 
-    <p class="micro-label">Display options</p>
+    <p class="micro-label" data-i18n="display.options">Display options</p>
 
     <p class="switch-row">
-      <span class="switch-text"><span class="switch-title">Show New Moon affirmations</span><span class="helper">Affirmations for the natal house of the most recent New Moon, shown for 28 days. Applies immediately.</span></span>
+      <span class="switch-text"><span class="switch-title" data-i18n="display.affirmations">Show New Moon affirmations</span><span class="helper" data-i18n="display.affirmationsHelp">Affirmations for the natal house of the most recent New Moon, shown for 28 days. Applies immediately.</span></span>
       <input type="checkbox" class="switch" id="opt-affirmations" name="opt-affirmations" checked>
     </p>
     <hr class="rule">
     <p class="switch-row">
-      <span class="switch-text"><span class="switch-title">Show transition times</span><span class="helper">When the Moon changes sign or house during a day, note the time it happens.</span></span>
+      <span class="switch-text"><span class="switch-title" data-i18n="display.transitions">Show transition times</span><span class="helper" data-i18n="display.transitionsHelp">When the Moon changes sign or house during a day, note the time it happens.</span></span>
       <input type="checkbox" class="switch" id="opt-transitions" name="opt-transitions" checked>
     </p>
     <hr class="rule">
     <p class="switch-row">
-      <span class="switch-text"><span class="switch-title">Show both readings on transition days</span><span class="helper">On today, also show the reading the Moon moves into later, alongside the current one. Past and future days always show both.</span></span>
+      <span class="switch-text"><span class="switch-title" data-i18n="display.bothReadings">Show both readings on transition days</span><span class="helper" data-i18n="display.bothReadingsHelp">On today, also show the reading the Moon moves into later, alongside the current one. Past and future days always show both.</span></span>
       <input type="checkbox" class="switch" id="opt-both-readings" name="opt-both-readings">
     </p>
     <hr class="rule">
     <p class="switch-row">
-      <span class="switch-text"><span class="switch-title">Show your check-in on the daily view</span><span class="helper">The saved check-in card, shown on days you checked in. Turning it off hides the card &mdash; your check-ins are kept either way.</span></span>
+      <span class="switch-text"><span class="switch-title" data-i18n="display.recordCard">Show your check-in on the daily view</span><span class="helper" data-i18n="display.recordCardHelp">The saved check-in card, shown on days you checked in. Turning it off hides the card &mdash; your check-ins are kept either way.</span></span>
       <input type="checkbox" class="switch" id="opt-record-card" name="opt-record-card" checked>
     </p>
 
-    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog" data-i18n="btn.done">Done</button></p>
   </div>
 </dialog>
 
 <!-- ====================================================== YOUR DATA -->
 <dialog id="dialog-data" class="dialog">
   <div class="glass dialog-card">
-    <p class="dialog-head"><span class="dialog-title">Your data</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+    <p class="dialog-head"><span class="dialog-title" data-i18n="data.title">Your data</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close" data-i18n-aria="btn.close">&times;</button></p>
 
-    <p class="micro-label">Export</p>
-    <p class="helper">Everything on your account &mdash; your chart, every check-in with the sky it was saved under, and your ritual marks &mdash; as a single JSON file. Yours to keep, readable without this app.</p>
-    <p class="btn-row"><button type="button" class="btn btn-ghost" data-action="export-data">Download my data</button></p>
+    <p class="micro-label" data-i18n="data.export">Export</p>
+    <p class="helper" data-i18n="data.exportHelp">Everything on your account &mdash; your chart, every check-in with the sky it was saved under, and your ritual marks &mdash; as a single JSON file. Yours to keep, readable without this app.</p>
+    <p class="btn-row"><button type="button" class="btn btn-ghost" data-action="export-data" data-i18n="data.download">Download my data</button></p>
     <p class="data-note helper" hidden></p>
 
     <hr class="rule">
 
-    <p class="micro-label">Delete account</p>
+    <p class="micro-label" data-i18n="data.deleteTitle">Delete account</p>
     <p class="helper">This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and <strong>cannot be undone</strong> &mdash; there is no copy for us to restore from. Download your data first if you want to keep it.</p>
 
     <div class="danger-confirm" hidden>
@@ -659,26 +659,26 @@
       </p>
       <p class="data-error helper" hidden></p>
       <p class="btn-row">
-        <button type="button" class="btn btn-danger" data-action="delete-confirm" disabled>Delete everything</button>
-        <button type="button" class="btn btn-ghost" data-action="delete-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" data-action="delete-confirm" data-i18n="data.deleteGo" disabled>Delete everything</button>
+        <button type="button" class="btn btn-ghost" data-action="delete-cancel" data-i18n="data.cancel">Cancel</button>
       </p>
     </div>
 
-    <p class="btn-row danger-start"><button type="button" class="btn btn-ghost btn-danger-quiet" data-action="delete-start">Delete my account</button></p>
+    <p class="btn-row danger-start"><button type="button" class="btn btn-ghost btn-danger-quiet" data-action="delete-start" data-i18n="data.deleteStart">Delete my account</button></p>
 
-    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog" data-i18n="btn.done">Done</button></p>
   </div>
 </dialog>
 
 <!-- ========================================================= ABOUT -->
 <dialog id="dialog-about" class="dialog">
   <div class="glass dialog-card">
-    <p class="dialog-head"><span class="dialog-title">About</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
-    <p class="micro-label">About</p>
+    <p class="dialog-head"><span class="dialog-title" data-i18n="about.title">About</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close" data-i18n-aria="btn.close">&times;</button></p>
+    <p class="micro-label" data-i18n="about.title">About</p>
     <p class="about-line">Lunar Tracker</p>
-    <p class="helper">Positions computed with the Swiss Ephemeris, in your browser.</p>
+    <p class="helper" data-i18n="about.engine">Positions computed with the Swiss Ephemeris, in your browser.</p>
     <p class="helper">This app is free software under the AGPL-3.0: <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" target="_blank" rel="noopener noreferrer">read or download the source</a>.</p>
-    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog" data-i18n="btn.done">Done</button></p>
   </div>
 </dialog>
 
@@ -689,7 +689,7 @@
       <span class="dialog-title">August 2026</span>
       <button type="button" class="icon-btn" data-action="prev-month" aria-label="Previous month"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
       <button type="button" class="icon-btn" data-action="next-month" aria-label="Next month"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
-      <button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button>
+      <button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close" data-i18n-aria="btn.close">&times;</button>
     </p>
     <p class="cal-legend"><button type="button" class="ghost-btn" data-action="this-month">This month</button><span class="legend-key">Checked in</span></p>
     <hr class="rule">

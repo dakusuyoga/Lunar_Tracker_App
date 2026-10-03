@@ -24,6 +24,7 @@
       it doesn't — never an empty panel, and never "— content pending —"
       for text that does exist in the other language. */
 import { loadState, saveState } from "./store.js";
+import { STRINGS } from "./strings.js";
 
 export const LANGUAGES = {
   en: { label: "English", luxon: "en" },
@@ -88,8 +89,15 @@ function mergeOver(base, over) {
     if (b && o && typeof b === "object" && typeof o === "object"
         && !Array.isArray(b) && !Array.isArray(o)) {
       out[key] = mergeOver(b, o);
-    } else if (o === undefined || o === null || o === "" ||
-               (Array.isArray(o) && o.length === 0)) {
+    } else if (Array.isArray(o)) {
+      /* An untranslated list in the template is `["", "", ""]` — the
+         right length, no text. Checking only `length === 0` let that win
+         and rendered three empty affirmations, which read on screen as
+         the panel having vanished. Drop the blanks; if nothing is left,
+         the list isn't translated at all, so fall back whole. */
+      const filled = o.filter((x) => String(x || "").trim());
+      out[key] = filled.length ? filled : b;
+    } else if (o === undefined || o === null || String(o).trim() === "") {
       out[key] = b;
     } else {
       out[key] = o;
@@ -103,6 +111,49 @@ export async function loadContent(lang = currentLang()) {
   if (lang === DEFAULT_LANG) return base;
   const over = await rawContent(lang);
   return mergeOver(base, over);
+}
+
+/* ── Interface strings ───────────────────────────────────────────────
+   Bundled, not loaded: the catalogue is a few KB, it is needed before
+   anything can render, and a flash of untranslated chrome while a chunk
+   downloads would be worse than the bytes. The readings are the opposite
+   case on both counts, which is why they load. */
+
+export function t(key, vars) {
+  const lang = currentLang();
+  const s = (STRINGS[lang] && STRINGS[lang][key]) ??
+            (STRINGS[DEFAULT_LANG] && STRINGS[DEFAULT_LANG][key]);
+  if (s === undefined) {
+    /* A key with no English is a typo, not a translation gap. Say so
+       loudly in development rather than printing the key on screen. */
+    console.warn(`i18n: no string for "${key}"`);
+    return "";
+  }
+  if (!vars) return s;
+  return s.replace(/\{(\w+)\}/g, (m, name) =>
+    (name in vars ? String(vars[name]) : m));
+}
+
+/* Marks in the markup, so the HTML stays the source of truth for what is
+   on each screen and this never has to duplicate the page structure:
+
+     data-i18n="key"        → textContent
+     data-i18n-ph="key"     → placeholder
+     data-i18n-aria="key"   → aria-label
+     data-i18n-title="key"  → title
+
+   Called at boot and again on every language change. */
+export function applyStrings(root = document) {
+  for (const el of root.querySelectorAll("[data-i18n]")) {
+    el.textContent = t(el.dataset.i18n);
+  }
+  for (const [attr, prop] of [["i18nPh", "placeholder"], ["i18nAria", "aria-label"], ["i18nTitle", "title"]]) {
+    const sel = `[data-${prop === "placeholder" ? "i18n-ph" : prop === "title" ? "i18n-title" : "i18n-aria"}]`;
+    for (const el of root.querySelectorAll(sel)) {
+      el.setAttribute(prop, t(el.dataset[attr]));
+    }
+  }
+  document.documentElement.lang = currentLang();
 }
 
 /* ── Counting ────────────────────────────────────────────────────── */

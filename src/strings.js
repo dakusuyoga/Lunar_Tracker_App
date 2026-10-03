@@ -1,0 +1,219 @@
+/* ── Interface strings (V3, stage 1) ─────────────────────────────────
+   The chrome — navigation, buttons, labels, dialogs — separately from
+   the readings. The two are translated on different schedules: the
+   interface switches to Russian as soon as these exist, while the
+   readings keep falling back to English until content.ru.js is filled
+   in. That staging is the point; see i18n.js.
+
+   KEYS ARE NAMESPACED BY SCREEN (`auth.*`, `menu.*`, `display.*`) so a
+   string's home is obvious from its name, and so a screen can be worked
+   through in one pass without hunting.
+
+   EVERY KEY MUST EXIST IN `en`. English is the fallback, so a key
+   missing there has nothing to fall back to and would render as its own
+   key name. A key missing from `ru` simply shows English — which is
+   exactly stage 1's behaviour for anything not yet done.
+
+   Interpolation is `{name}`: t("record.saved", { date: "2 October" }). */
+
+export const STRINGS = {
+  en: {
+    /* ── Boot ── */
+    "boot.loading": "Loading the ephemeris",
+    "boot.failed": "The sky didn’t finish loading.",
+    "boot.retry": "Try again",
+    "boot.detail": "Technical detail",
+    "boot.storage": "Your browser is blocking local storage, so check-ins can’t be saved on this device.",
+
+    /* ── Auth ── */
+    "auth.tablist": "Log in or sign up",
+    "auth.login": "Log in",
+    "auth.signup": "Sign up",
+    "auth.welcome": "Welcome back",
+    "auth.create": "Create your account",
+    "auth.lede": "The moon, read through your own chart.",
+    "auth.email": "Email",
+    "auth.emailPlaceholder": "you@example.com",
+    "auth.password": "Password",
+    "auth.confirm": "Confirm password",
+    "auth.showPassword": "Show password",
+    "auth.hidePassword": "Hide password",
+    "auth.forgot": "Forgot password?",
+    "auth.createBtn": "Create account",
+    "auth.reset": "Reset your password",
+    "auth.resetLede": "We’ll email you a link to set a new one.",
+    "auth.sendReset": "Send reset link",
+    "auth.checkInbox": "Check your inbox",
+    "auth.sentConfirm": "We’ve sent a confirmation link to {email}. Click it to finish setting up your account.",
+    "auth.sentReset": "We’ve sent a password reset link to {email}.",
+    "auth.badPassword": "That password doesn’t match this email. Try again, or reset it below.",
+
+    /* ── Header and menu ── */
+    "app.name": "Lunar Tracker",
+    "menu.location": "Location",
+    "menu.display": "Display",
+    "menu.data": "Your data",
+    "menu.about": "About",
+    "menu.chart": "Your chart",
+    "menu.signOut": "Sign out",
+    "menu.checkin": "Check-in",
+    "menu.checkedIn": "Checked in ✓",
+
+    /* ── Date navigation ── */
+    "date.chooseDate": "Choose date",
+    "date.prev": "Previous day",
+    "date.next": "Next day",
+    "date.today": "Today",
+    "date.history": "Open history calendar",
+    "date.backToToday": "Back to today",
+    "date.backToDaily": "Back to daily view",
+
+    /* ── Zodiac toggle ── */
+    "zodiac.group": "Zodiac system",
+    "zodiac.tropical": "Tropical",
+    "zodiac.sidereal": "Sidereal",
+
+    /* ── Display dialog ── */
+    "display.title": "Display",
+    "display.language": "Language",
+    "display.languageHelp": "Readings and interface. Your check-ins are unaffected — they store codes, not words, so they read correctly in either language.",
+    "display.options": "Display options",
+    "display.affirmations": "Show New Moon affirmations",
+    "display.affirmationsHelp": "Affirmations for the natal house of the most recent New Moon, shown for 28 days. Applies immediately.",
+    "display.transitions": "Show transition times",
+    "display.transitionsHelp": "When the Moon changes sign or house during a day, note the time it happens.",
+    "display.bothReadings": "Show both readings on transition days",
+    "display.bothReadingsHelp": "On today, also show the reading the Moon moves into later, alongside the current one. Past and future days always show both.",
+    "display.recordCard": "Show your check-in on the daily view",
+    "display.recordCardHelp": "The saved check-in card, shown on days you checked in. Turning it off hides the card — your check-ins are kept either way.",
+
+    /* ── Your data dialog ── */
+    "data.title": "Your data",
+    "data.export": "Export",
+    "data.exportHelp": "Everything on your account — your chart, every check-in with the sky it was saved under, and your ritual marks — as a single JSON file. Yours to keep, readable without this app.",
+    "data.download": "Download my data",
+    "data.collecting": "Collecting…",
+    "data.exportFailed": "Couldn’t build the export just now. Check your connection and try again.",
+    "data.deleteTitle": "Delete account",
+    "data.deleteHelp": "This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and cannot be undone — there is no copy for us to restore from. Download your data first if you want to keep it.",
+    "data.deleteStart": "Delete my account",
+    "data.deleteConfirmLabel": "Type DELETE to confirm",
+    "data.deleteGo": "Delete everything",
+    "data.deleting": "Deleting…",
+    "data.deleteFailed": "Couldn’t delete the account. Nothing was removed — try again, or get in touch.",
+    "data.cancel": "Cancel",
+
+    /* ── About ── */
+    "about.title": "About",
+    "about.engine": "Positions computed with the Swiss Ephemeris, in your browser.",
+    "about.licence": "This app is free software under the AGPL-3.0:",
+    "about.source": "read or download the source",
+
+    /* ── Shared buttons ── */
+    "btn.done": "Done",
+    "btn.save": "Save",
+    "btn.cancel": "Cancel",
+    "btn.close": "Close",
+    "btn.edit": "Edit",
+  },
+
+  ru: {
+    /* ── Загрузка ── */
+    "boot.loading": "Загрузка эфемерид",
+    "boot.failed": "Небо не загрузилось до конца.",
+    "boot.retry": "Попробовать снова",
+    "boot.detail": "Технические подробности",
+    "boot.storage": "Браузер блокирует локальное хранилище, поэтому отметки не сохранятся на этом устройстве.",
+
+    /* ── Вход ── */
+    "auth.tablist": "Вход или регистрация",
+    "auth.login": "Войти",
+    "auth.signup": "Регистрация",
+    "auth.welcome": "С возвращением",
+    "auth.create": "Создайте аккаунт",
+    "auth.lede": "Луна, прочитанная через вашу карту.",
+    "auth.email": "Эл. почта",
+    "auth.emailPlaceholder": "you@example.com",
+    "auth.password": "Пароль",
+    "auth.confirm": "Подтвердите пароль",
+    "auth.showPassword": "Показать пароль",
+    "auth.hidePassword": "Скрыть пароль",
+    "auth.forgot": "Забыли пароль?",
+    "auth.createBtn": "Создать аккаунт",
+    "auth.reset": "Сброс пароля",
+    "auth.resetLede": "Пришлём на почту ссылку для установки нового.",
+    "auth.sendReset": "Отправить ссылку",
+    "auth.checkInbox": "Проверьте почту",
+    "auth.sentConfirm": "Мы отправили ссылку для подтверждения на {email}. Перейдите по ней, чтобы завершить создание аккаунта.",
+    "auth.sentReset": "Мы отправили ссылку для сброса пароля на {email}.",
+    "auth.badPassword": "Пароль не подходит к этой почте. Попробуйте ещё раз или сбросьте его ниже.",
+
+    /* ── Шапка и меню ── */
+    "app.name": "Lunar Tracker",
+    "menu.location": "Местоположение",
+    "menu.display": "Отображение",
+    "menu.data": "Ваши данные",
+    "menu.about": "О приложении",
+    "menu.chart": "Ваша карта",
+    "menu.signOut": "Выйти",
+    "menu.checkin": "Отметиться",
+    "menu.checkedIn": "Отмечено ✓",
+
+    /* ── Навигация по дням ── */
+    "date.chooseDate": "Выбрать дату",
+    "date.prev": "Предыдущий день",
+    "date.next": "Следующий день",
+    "date.today": "Сегодня",
+    "date.history": "Открыть календарь",
+    "date.backToToday": "Назад к сегодня",
+    "date.backToDaily": "Назад к дневному виду",
+
+    /* ── Зодиак ── */
+    "zodiac.group": "Система зодиака",
+    "zodiac.tropical": "Тропический",
+    "zodiac.sidereal": "Сидерический",
+
+    /* ── Отображение ── */
+    "display.title": "Отображение",
+    "display.language": "Язык",
+    "display.languageHelp": "Тексты и интерфейс. На ваши отметки это не влияет — в них хранятся коды, а не слова, поэтому они правильно читаются на любом языке.",
+    "display.options": "Параметры отображения",
+    "display.affirmations": "Показывать аффирмации новолуния",
+    "display.affirmationsHelp": "Аффирмации для натального дома последнего новолуния, показываются 28 дней. Применяется сразу.",
+    "display.transitions": "Показывать время переходов",
+    "display.transitionsHelp": "Когда Луна в течение дня меняет знак или дом, отмечать время перехода.",
+    "display.bothReadings": "Показывать оба текста в дни перехода",
+    "display.bothReadingsHelp": "Сегодня показывать и текст, в который Луна перейдёт позже, рядом с текущим. Для прошлых и будущих дней оба показываются всегда.",
+    "display.recordCard": "Показывать отметку в дневном виде",
+    "display.recordCardHelp": "Карточка сохранённой отметки в дни, когда вы отмечались. Если выключить, карточка скроется — сами отметки сохраняются в любом случае.",
+
+    /* ── Ваши данные ── */
+    "data.title": "Ваши данные",
+    "data.export": "Экспорт",
+    "data.exportHelp": "Всё, что есть в вашем аккаунте — карта, каждая отметка вместе с небом на момент сохранения и отметки о ритуалах — одним файлом JSON. Он остаётся у вас и читается без этого приложения.",
+    "data.download": "Скачать мои данные",
+    "data.collecting": "Собираем…",
+    "data.exportFailed": "Не удалось собрать файл. Проверьте соединение и попробуйте снова.",
+    "data.deleteTitle": "Удалить аккаунт",
+    "data.deleteHelp": "Это удалит ваш аккаунт и всё, что в нём: карту, все отметки и все отметки о ритуалах. Произойдёт сразу и отменить нельзя — у нас не остаётся копии для восстановления. Если хотите сохранить данные, сначала скачайте их.",
+    "data.deleteStart": "Удалить мой аккаунт",
+    "data.deleteConfirmLabel": "Введите DELETE для подтверждения",
+    "data.deleteGo": "Удалить всё",
+    "data.deleting": "Удаляем…",
+    "data.deleteFailed": "Не удалось удалить аккаунт. Ничего не удалено — попробуйте снова или напишите нам.",
+    "data.cancel": "Отмена",
+
+    /* ── О приложении ── */
+    "about.title": "О приложении",
+    "about.engine": "Положения рассчитаны по Swiss Ephemeris прямо в вашем браузере.",
+    "about.licence": "Это свободное ПО под лицензией AGPL-3.0:",
+    "about.source": "посмотреть или скачать исходный код",
+
+    /* ── Кнопки ── */
+    "btn.done": "Готово",
+    "btn.save": "Сохранить",
+    "btn.cancel": "Отмена",
+    "btn.close": "Закрыть",
+    "btn.edit": "Изменить",
+  },
+};

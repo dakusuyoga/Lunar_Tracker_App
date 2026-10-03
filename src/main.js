@@ -10,7 +10,7 @@ import {
    chosen language rather than bundled for every language — see i18n.js.
    `CONTENT` is therefore filled in at boot and swapped when the language
    changes, not imported. It is never read before boot awaits it. */
-import { loadContent, currentLang, setLang, LANGUAGES } from "./i18n.js";
+import { loadContent, currentLang, setLang, applyStrings, t } from "./i18n.js";
 let CONTENT = {};
 import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
@@ -747,7 +747,7 @@ function wireDataDialog() {
     const btn = e.currentTarget;
     btn.disabled = true;
     const was = btn.textContent;
-    btn.textContent = "Collecting…";
+    btn.textContent = t("data.collecting");
     try {
       const { checkIns, rituals } = await exportMyData(account.id);
       note.textContent = `Downloaded — ${checkIns} check-in${checkIns === 1 ? "" : "s"}` +
@@ -755,7 +755,7 @@ function wireDataDialog() {
       note.hidden = false;
     } catch (err) {
       console.warn("export failed", err);
-      note.textContent = "Couldn't build the export just now. Check your connection and try again.";
+      note.textContent = t("data.exportFailed");
       note.hidden = false;
     }
     btn.disabled = false;
@@ -775,7 +775,7 @@ function wireDataDialog() {
 
   goBtn.addEventListener("click", async () => {
     goBtn.disabled = true;
-    goBtn.textContent = "Deleting…";
+    goBtn.textContent = t("data.deleting");
     errorEl.hidden = true;
     try {
       await deleteAccount();
@@ -784,10 +784,10 @@ function wireDataDialog() {
       window.location.reload();
     } catch (err) {
       console.error("account deletion failed", err);
-      errorEl.textContent = "Couldn't delete the account. Nothing was removed — try again, or get in touch.";
+      errorEl.textContent = t("data.deleteFailed");
       errorEl.hidden = false;
       goBtn.disabled = false;
-      goBtn.textContent = "Delete everything";
+      goBtn.textContent = t("data.deleteGo");
     }
   });
 }
@@ -1323,6 +1323,7 @@ function wire() {
       if (b.dataset.lang === currentLang()) return;
       setLang(b.dataset.lang);
       paintLang();
+      applyStrings();
       CONTENT = await loadContent();
       render();
     });
@@ -1387,7 +1388,13 @@ if (navigator.brave) document.documentElement.classList.add("brave");
   /* The readings are needed by the first render, so this is awaited
      before it — but started here, alongside the engine, so it costs no
      extra wall-clock time. */
-  document.documentElement.lang = currentLang();
+  /* The chrome is translated from a bundled catalogue, so it can be in
+     the right language before anything else finishes loading. The
+     readings are fetched per language and awaited before the first
+     render — stage 1 of V3 is exactly this split: interface Russian,
+     readings still falling back to English until content.ru.js is
+     filled in. */
+  applyStrings();
   const contentPromise = loadContent().then((c) => { CONTENT = c; });
 
   try {

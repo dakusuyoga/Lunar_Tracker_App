@@ -10,25 +10,17 @@
    sessions, confirmation and reset emails. Nothing here handles a
    password beyond passing it straight to the client. */
 import { supabase, configured } from "./supabase.js";
+import { t } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 
+/* Keys, not text: this screen rewrites its own heading and button on
+   every mode change, so the words have to be resolved at that moment
+   rather than frozen when the module loaded. */
 const COPY = {
-  login: {
-    title: "Welcome back",
-    lede: "The moon, read through your own chart.",
-    submit: "Log in",
-  },
-  signup: {
-    title: "Create your account",
-    lede: "The moon, read through your own chart.",
-    submit: "Create account",
-  },
-  forgot: {
-    title: "Reset your password",
-    lede: "We'll email you a link to set a new one.",
-    submit: "Send reset link",
-  },
+  login:  { title: "auth.welcome", lede: "auth.lede",       submit: "auth.login" },
+  signup: { title: "auth.create",  lede: "auth.lede",       submit: "auth.createBtn" },
+  forgot: { title: "auth.reset",   lede: "auth.resetLede",  submit: "auth.sendReset" },
 };
 
 let mode = "login";
@@ -64,7 +56,7 @@ function setError(msg) {
 
 function setBusy(on, label) {
   submitBtn.disabled = on;
-  submitBtn.textContent = on ? label : COPY[mode]?.submit || submitBtn.textContent;
+  submitBtn.textContent = on ? label : (COPY[mode] ? t(COPY[mode].submit) : submitBtn.textContent);
 }
 
 export function setMode(next) {
@@ -84,21 +76,20 @@ export function setMode(next) {
 
   if (sent) {
     const email = $("login-email").value.trim();
-    title.textContent = "Check your inbox";
+    title.textContent = t("auth.checkInbox");
     noticeEl.hidden = false;
-    noticeEl.innerHTML = next === "sent-confirm"
-      ? `We've sent a confirmation link to <strong></strong>. Click it to finish setting up your account.`
-      : `We've sent a password reset link to <strong></strong>.`;
+    noticeEl.innerHTML = t(next === "sent-confirm" ? "auth.sentConfirm" : "auth.sentReset",
+      { email: "<strong></strong>" });
     noticeEl.querySelector("strong").textContent = email;
     lede.hidden = true;
     return;
   }
 
   const copy = COPY[next];
-  title.textContent = copy.title;
-  lede.textContent = copy.lede;
+  title.textContent = t(copy.title);
+  lede.textContent = t(copy.lede);
   lede.hidden = false;
-  submitBtn.textContent = copy.submit;
+  submitBtn.textContent = t(copy.submit);
 
   for (const seg of segmented.querySelectorAll(".seg")) {
     const on = seg.dataset.auth === next;
@@ -206,7 +197,7 @@ export function initAuth() {
       const showing = input.type === "text";
       input.type = showing ? "password" : "text";
       toggle.setAttribute("aria-pressed", String(!showing));
-      toggle.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      toggle.setAttribute("aria-label", t(showing ? "auth.showPassword" : "auth.hidePassword"));
     });
   }
 

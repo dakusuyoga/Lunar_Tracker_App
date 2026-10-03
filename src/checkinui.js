@@ -12,6 +12,7 @@ import { DateTime } from "luxon";
 import { buildCheckIn, saveCheckIn, fetchCheckIn } from "./checkin.js";
 import { pendingFor } from "./outbox.js";
 import { showScreen } from "./screens.js";
+import { t } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 const MULTI = new Set(["emotion", "body"]);
@@ -120,7 +121,7 @@ export function refreshHeaderButton() {
   const btn = document.querySelector('[data-action="open-checkin"]');
   if (!btn) return;
   const done = Boolean(todaysCheckIn);
-  btn.textContent = done ? "Checked in ✓" : "Check-in";
+  btn.textContent = done ? t("menu.checkedIn") : t("menu.checkin");
   btn.classList.toggle("btn-primary", !done);
   btn.classList.toggle("btn-ghost", done);
 }
