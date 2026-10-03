@@ -59,6 +59,13 @@ function setBusy(on, label) {
   submitBtn.textContent = on ? label : (COPY[mode] ? t(COPY[mode].submit) : submitBtn.textContent);
 }
 
+/* The heading, lede and submit label are written by setMode, so
+   applyStrings cannot reach them — re-running the current mode is what
+   re-translates this screen. Called when the language changes. */
+export function refreshAuthCopy() {
+  if (card) setMode(mode);
+}
+
 export function setMode(next) {
   mode = next;
   setError("");

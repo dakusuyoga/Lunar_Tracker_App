@@ -18,8 +18,8 @@ import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
 import { attachPlaceSearch, timezoneFor } from "./geocode.js";
 import { supabase, currentSession } from "./supabase.js";
-import { initAuth, signOut } from "./auth.js";
-import { showScreen } from "./screens.js";
+import { initAuth, signOut, refreshAuthCopy } from "./auth.js";
+import { showScreen, currentScreen } from "./screens.js";
 import {
   fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
 } from "./profile.js";
@@ -1338,8 +1338,12 @@ function wire() {
       setLang(b.dataset.lang);
       paintLang();
       applyStrings();
+      refreshAuthCopy();   // its heading and button are module-owned
       CONTENT = await loadContent();
-      render();
+      /* The switch also lives on login and first run, where there is no
+         chart to draw and render() has nothing to work from. The chrome
+         is already re-translated by applyStrings above. */
+      if (currentScreen() === "screen-daily") render();
     });
   }
   paintLang();

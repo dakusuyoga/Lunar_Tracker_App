@@ -980,3 +980,23 @@ span.mark { cursor: default; }
    own line underneath instead of competing for the row. */
 .lang-row { display: block; }
 .lang-row .segmented { display: inline-flex; margin-top: 14px; }
+
+/* ------------------------------------- 20. LANGUAGE ON ENTRY (V3) */
+/* The account menu — and so the Display dialog, and so the full language
+   control — lives inside the daily screen's header. Login and first run
+   have no header, which left a Russian speaker on an English login page
+   with nothing to press. This is that escape hatch: quiet, because the
+   browser-language default already handles most people, and it is only
+   ever touched once. */
+.lang-switch {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 14px;
+}
+.lang-link {
+  background: none; border: 0; padding: 2px 2px;
+  font: inherit; font-size: 13px; color: var(--ink-muted);
+  cursor: pointer; border-radius: 4px;
+}
+.lang-link:hover { color: var(--ink); }
+.lang-link.is-active { color: var(--gold); font-weight: 600; }
+.lang-sep { color: var(--hairline); font-size: 13px; }
