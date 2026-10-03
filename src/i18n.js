@@ -194,6 +194,30 @@ export const fmtDate = (dt, opts = DATE_FULL, lang = currentLang()) =>
 export const fmtTime = (dt, lang = currentLang()) =>
   dt.setLocale(lang).toLocaleString(TIME_HM).toLowerCase();
 
+/* ── Ordinals ────────────────────────────────────────────────────────
+   English ordinals are irregular enough to need a table — 1st, 2nd, 3rd,
+   then -th. Russian forms them from the digits: 1-й, 2-й … 12-й, all
+   with the same ending here, because every ordinal in this app modifies
+   `дом` (house), which is masculine nominative. If an ordinal ever has
+   to agree with a different noun, this is where the case goes — not into
+   a second table of twelve strings. */
+const EN_ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th",
+  "7th", "8th", "9th", "10th", "11th", "12th"];
+
+/* `form` is the grammatical case the ordinal has to agree in. English
+   ignores it. Russian does not: the house line says "проходит 9-й дом"
+   (accusative, same as nominative for an inanimate masculine noun), but
+   "в вашем 3-м доме" is prepositional and needs a different ending. One
+   argument rather than a second table, because the stem never changes —
+   only the ending does. */
+const RU_ORDINAL_ENDING = { nom: "й", prep: "м" };
+
+export function ordinal(n, form = "nom", lang = currentLang()) {
+  if (!n && n !== 0) return "";
+  if (lang === "ru") return `${n}-${RU_ORDINAL_ENDING[form] || "й"}`;
+  return EN_ORDINALS[n] || `${n}th`;
+}
+
 /* ── Counting ────────────────────────────────────────────────────── */
 
 /* Russian has three plural forms, not two, so `n === 1 ? "" : "s"` is

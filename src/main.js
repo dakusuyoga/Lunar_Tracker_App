@@ -11,7 +11,7 @@ import {
    `CONTENT` is therefore filled in at boot and swapped when the language
    changes, not imported. It is never read before boot awaits it. */
 import { loadContent, currentLang, setLang, applyStrings, t,
-         fmtDate, fmtTime as fmtTimeDT,
+         fmtDate, fmtTime as fmtTimeDT, ordinal,
          DATE_SHORT, DATE_FULL_YEAR, DATE_BIRTH } from "./i18n.js";
 let CONTENT = {};
 import { moonShadowPath } from "./moonicon.js";
@@ -224,9 +224,21 @@ const glyph = (i) => `<span class="glyph">${SIGN_GLYPHS[i]}</span>`;
    capitalising it would orphan every saved preference. Display only. */
 const modeLabel = () => (state.zodiacMode === "sidereal" ? "Sidereal" : "Tropical");
 
+/* Sign names come from the catalogue, keyed by the English name
+   lower-cased — the same key the content files use. Two accessors
+   because Russian declines: `signOf` is the bare name, `signIn` the form
+   that follows "Луна в". In English both return the same word. */
+const signOf  = (i) => t(`sign.${SIGNS[i].toLowerCase()}`);
+const signIn  = (i) => t(`signIn.${SIGNS[i].toLowerCase()}`);
+/* Phase events already carry a lower-cased sign key, so they look the
+   string up directly rather than going back through the index. */
+const signInKey = (key) => t(`signIn.${key}`);
+
 function signLine(day) {
   const idx = day.moonSignIndex;
-  const plain = `Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${modeLabel()}`;
+  const plain = t("reading.moonIn", {
+    sign: signIn(idx), deg: degInSign(day.moonLon), mode: modeLabel(),
+  });
   const segs = day.signSegments;
   if (state.showTransitions === false || !segs || segs.length < 2) {
     return `${glyph(idx)} ${esc(plain)}`;
@@ -235,8 +247,8 @@ function signLine(day) {
   if (!day.isToday) {
     const span = segs.map((s, i) =>
       i === segs.length - 1
-        ? `${glyph(s.value)} ${esc(`${SIGNS[s.value]} after`)}`
-        : `${glyph(s.value)} ${esc(`${SIGNS[s.value]} until ${fmtTime(s.to)}`)}`
+        ? `${glyph(s.value)} ${esc(t("reading.signAfter", { sign: signOf(s.value) }))}`
+        : `${glyph(s.value)} ${esc(t("reading.signUntil", { sign: signOf(s.value), time: fmtTime(s.to) }))}`
     ).join(" · ");
     return `${span} · ${esc(modeLabel())}`;
   }
@@ -245,8 +257,8 @@ function signLine(day) {
   const i = segs.indexOf(active);
   const next = segs[i + 1];
   const note = next
-    ? `<span class="ingress">→ ${glyph(next.value)} ${esc(`${SIGNS[next.value]} from ${fmtTime(next.from)}`)}</span>`
-    : `<span class="ingress">${esc(`since ${fmtTime(active.from)}`)}</span>`;
+    ? `<span class="ingress">→ ${glyph(next.value)} ${esc(t("reading.signFrom", { sign: signOf(next.value), time: fmtTime(next.from) }))}</span>`
+    : `<span class="ingress">${esc(t("reading.since", { time: fmtTime(active.from) }))}</span>`;
   return `${glyph(idx)} ${esc(plain)} ${note}`;
 }
 
@@ -266,7 +278,7 @@ function housesFollowSigns(day) {
 
 function houseLine(day) {
   const segs = day.houseSegments;
-  const plain = `Moon transiting the ${ORDINALS[day.house]} house`;
+  const plain = t("reading.moonHouse", { house: ordinal(day.house) });
   if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
 
   const echoes = housesFollowSigns(day);
@@ -274,20 +286,20 @@ function houseLine(day) {
   if (!day.isToday) {
     const span = segs.map((s, i) =>
       i === segs.length - 1
-        ? `${ORDINALS[s.value]}${echoes ? "" : " after"}`
-        : `${ORDINALS[s.value]}${echoes ? "" : ` until ${fmtTime(s.to)}`}`
-    ).join(echoes ? ", then the " : " · ");
-    return esc(`Moon transiting the ${span}`);
+        ? (echoes ? ordinal(s.value) : t("reading.houseAfter", { house: ordinal(s.value) }))
+        : (echoes ? ordinal(s.value) : t("reading.houseUntil", { house: ordinal(s.value), time: fmtTime(s.to) }))
+    ).join(echoes ? t("reading.houseJoin") : " · ");
+    return esc(t("reading.moonHouseSpan", { span }));
   }
 
   const active = activeSegment(segs, day.anchor);
   const next = segs[segs.indexOf(active) + 1];
-  const head = esc(`Moon transiting the ${ORDINALS[active.value]} house`);
+  const head = esc(t("reading.moonHouse", { house: ordinal(active.value) }));
   // Nothing left to say once the time is dropped and the change has passed.
   if (echoes && !next) return head;
   const note = next
-    ? `→ ${ORDINALS[next.value]}${echoes ? "" : ` from ${fmtTime(next.from)}`}`
-    : `since ${fmtTime(active.from)}`;
+    ? `→ ${echoes ? ordinal(next.value) : t("reading.houseFrom", { house: ordinal(next.value), time: fmtTime(next.from) })}`
+    : t("reading.since", { time: fmtTime(active.from) });
   return `${head} <span class="ingress">${esc(note)}</span>`;
 }
 
@@ -447,26 +459,26 @@ function render() {
 
   for (const { seg, i } of segmentsToRender(day.signSegments, day)) {
     parts.push(section(
-      qualify(`Moon in ${SIGNS[seg.value]}`, segmentRange(day.signSegments, i)),
+      qualify(t("reading.moonInSign", { sign: signIn(seg.value) }), segmentRange(day.signSegments, i)),
       contentOr(CONTENT.dailyMoonInSign[SIGNS[seg.value].toLowerCase()]),
       `sign-${i}`));
   }
   if (withHouses && day.houseSegments) {
     for (const { seg, i } of segmentsToRender(day.houseSegments, day)) {
       parts.push(section(
-        qualify(`Moon in your ${ORDINALS[seg.value]} house`, segmentRange(day.houseSegments, i)),
+        qualify(t("reading.moonInYourHouse", { house: ordinal(seg.value, "prep") }), segmentRange(day.houseSegments, i)),
         contentOr(CONTENT.dailyMoonInHouse[seg.value]),
         `house-${i}`));
     }
   }
   if (day.newMoonWindow) {
     const w = day.newMoonWindow;
-    const label = day.eclipse && day.eclipse.kind === "solar" ? "Solar Eclipse" : "New Moon";
+    const label = day.eclipse && day.eclipse.kind === "solar" ? t("phase.solarEclipse") : t("phase.new");
     const when = eventWhen(w);
-    parts.push(section(qualify(`${label} in ${esc(w.sign)}`, when),
+    parts.push(section(qualify(t("reading.phaseInSign", { phase: label, sign: signInKey(w.signKey) }), when),
       contentOr(CONTENT.newMoonInSign[w.signKey]), "newmoon-sign"));
     if (withHouses && w.house != null) {
-      parts.push(section(qualify(`${label} in your ${ORDINALS[w.house]} house`, when),
+      parts.push(section(qualify(t("reading.phaseInYourHouse", { phase: label, house: ordinal(w.house, "prep") }), when),
         contentOr(CONTENT.newMoonInHouse[w.house]), "newmoon-house"));
     }
   }
@@ -485,12 +497,12 @@ function render() {
   }
   if (day.fullMoonWindow) {
     const w = day.fullMoonWindow;
-    const label = day.eclipse && day.eclipse.kind === "lunar" ? "Lunar Eclipse" : "Full Moon";
+    const label = day.eclipse && day.eclipse.kind === "lunar" ? t("phase.lunarEclipse") : t("phase.full");
     const when = eventWhen(w);
-    parts.push(section(qualify(`${label} in ${esc(w.sign)}`, when),
+    parts.push(section(qualify(t("reading.phaseInSign", { phase: label, sign: signInKey(w.signKey) }), when),
       contentOr(CONTENT.fullMoonInSign[w.signKey]), "fullmoon-sign"));
     if (withHouses && w.house != null) {
-      parts.push(section(qualify(`${label} in your ${ORDINALS[w.house]} house`, when),
+      parts.push(section(qualify(t("reading.phaseInYourHouse", { phase: label, house: ordinal(w.house, "prep") }), when),
         contentOr(CONTENT.fullMoonInHouse[w.house]), "fullmoon-house"));
     }
     // Today only, for the same reason as the wishing ritual: it is
@@ -891,7 +903,7 @@ function renderProfileList() {
     `<hr class="rule">` +
     `<p class="datum"><span class="micro-label">Birth place</span>` +
       `<span class="value">${esc(p.place.displayName)}</span>` +
-      `<span class="helper">${esc(p.timezone)}${auto ? " (auto)" : ""}</span></p>`;
+      `<span class="helper">${esc(p.timezone)}${auto ? " " + t("chart.auto") : ""}</span></p>`;
 }
 
 /* Two states in one dialog: the chart at rest, and the form. */
@@ -1075,7 +1087,7 @@ function openLocationForm() {
   locPickedPlace = { ...state.location };
   locTzAuto = true;
   $("loc-place").value = "";
-  $("loc-place-chosen").textContent = `Current: ${state.location.displayName}`;
+  $("loc-place-chosen").textContent = t("loc.current", { place: state.location.displayName });
   $("loc-lat").value = state.location.latitude;
   $("loc-lon").value = state.location.longitude;
   $("loc-manual").open = false;

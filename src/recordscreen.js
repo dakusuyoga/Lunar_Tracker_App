@@ -14,18 +14,16 @@
    Moon changed sign in the afternoon the two legitimately differ, which is
    why the heading says when this was. */
 import { DateTime } from "luxon";
-import { SIGNS, SIGN_GLYPHS, ORDINALS, POINT_LABELS } from "./compute.js";
+import { SIGNS, SIGN_GLYPHS, POINT_LABELS } from "./compute.js";
 import { moonShadowPath } from "./moonicon.js";
 import { showScreen } from "./screens.js";
 import { fetchCheckIn } from "./checkin.js";
 import { fetchCompletions, RITUALS } from "./rituals.js";
-import { t, fmtDate, fmtTime } from "./i18n.js";
+import { t, fmtDate, fmtTime, ordinal } from "./i18n.js";
 
-const PHASE_LABEL = {
-  new: "New Moon", waxing_crescent: "Waxing Crescent", first_quarter: "First Quarter",
-  waxing_gibbous: "Waxing Gibbous", full: "Full Moon", waning_gibbous: "Waning Gibbous",
-  last_quarter: "Last Quarter", waning_crescent: "Waning Crescent",
-};
+/* The stored value is the key, so a check-in saved in one language reads
+   correctly in the other. */
+const phaseLabel = (key) => (key ? t(`phase.${key}`) : "—");
 
 let screen, ctx;
 let mode = "sidereal";   // this screen's own toggle, independent of the daily view
@@ -43,7 +41,7 @@ function renderMoon(row) {
   const tz = row.display_tz || ctx.timezone();
   const at = DateTime.fromISO(row.created_at).setZone(tz);
 
-  q(".phase-name").textContent = PHASE_LABEL[row.moon_phase] || "—";
+  q(".phase-name").textContent = phaseLabel(row.moon_phase);
   q(".illum").textContent = row.phase_angle == null ? ""
     : `${Math.round((1 - Math.cos(row.phase_angle * Math.PI / 180)) / 2 * 100)}% illuminated`;
 
@@ -62,18 +60,18 @@ function renderMoon(row) {
   const sign = mode === "sidereal" ? row.moon_natal_sign_sidereal : row.moon_natal_sign_tropical;
   const house = mode === "sidereal" ? row.moon_natal_house_sidereal : row.moon_natal_house_tropical;
   const conj = (mode === "sidereal" ? row.conjunctions_sidereal : row.conjunctions_tropical) || [];
-  const modeName = mode === "sidereal" ? "Sidereal" : "Tropical";
+  const modeName = t(mode === "sidereal" ? "zodiac.sidereal" : "zodiac.tropical");
 
   const parts = [];
   if (sign) {
     const i = SIGNS.findIndex((s) => s.toLowerCase() === sign);
     parts.push(`<p class="datum"><span class="micro-label">${t("record.sign")}</span><span class="value">` +
-      `<span class="glyph">${SIGN_GLYPHS[i]}</span> ${esc(SIGNS[i])} · ${modeName}</span></p>`);
+      `<span class="glyph">${SIGN_GLYPHS[i]}</span> ${esc(t(`sign.${sign}`))} · ${modeName}</span></p>`);
   }
   // Null house is a real state — no birth time — not a gap to paper over.
   if (house != null) {
     parts.push(`<p class="datum"><span class="micro-label">${t("record.house")}</span>` +
-      `<span class="value">${ORDINALS[house]} house</span></p>`);
+      `<span class="value">${t("reading.house", { house: ordinal(house) })}</span></p>`);
   }
   parts.push(`<p class="datum datum-wide"><span class="micro-label">${t("record.transit")}</span>` +
     `<span class="value conj">${conj.length

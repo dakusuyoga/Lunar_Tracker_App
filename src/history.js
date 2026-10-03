@@ -14,7 +14,7 @@
    separately and merged onto the grid rather than assumed to line up. */
 import { DateTime } from "luxon";
 import { supabase } from "./supabase.js";
-import { fmtDate, MONTH_YEAR } from "./i18n.js";
+import { t, fmtDate, currentLang, MONTH_YEAR } from "./i18n.js";
 
 let cursor = null;      // first day of the month on screen
 let onPick = null;
@@ -74,8 +74,12 @@ function draw(marks) {
   const first = cursor.startOf("month");
   const days = cursor.daysInMonth;
 
-  const out = ["S", "M", "T", "W", "T", "F", "S"]
-    .map((d) => `<span class="cal-dow">${d}</span>`);
+  /* Weekday initials from the locale, not a literal list: Russian's are
+     В П В С Ч П С, and the grid still starts on Sunday either way. */
+  const dow = Array.from({ length: 7 }, (_, k) =>
+    cursor.startOf("week").plus({ days: (k + 6) % 7 })
+      .setLocale(currentLang()).toFormat("ccccc"));
+  const out = dow.map((d) => `<span class="cal-dow">${d}</span>`);
 
   // Luxon weekday: 1 = Monday … 7 = Sunday; the grid starts on Sunday.
   const pad = first.weekday % 7;
@@ -104,7 +108,7 @@ function draw(marks) {
     note.className = "cal-empty hint";
     grid.insertAdjacentElement("afterend", note);
   }
-  note.textContent = "No check-ins this month.";
+  note.textContent = t("history.empty");
   note.hidden = !empty;
 }
 
