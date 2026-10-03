@@ -884,24 +884,24 @@ function renderProfileList() {
   if (!p) { box.innerHTML = ""; return; }
 
   const date = fmtDate(DateTime.fromISO(p.birthDate), DATE_BIRTH);
-  const time = p.timeUnknown ? "Not known" : p.birthTime;
+  const time = p.timeUnknown ? t("chart.timeUnknown") : p.birthTime;
 
   /* "(auto)" is only truthful when the zone really is the one the
      coordinates imply — so derive it rather than assert it. */
   const auto = timezoneFor(p.place.latitude, p.place.longitude) === p.timezone;
 
   box.innerHTML =
-    `<p class="datum"><span class="micro-label">Profile name</span>` +
+    `<p class="datum"><span class="micro-label">${esc(t("chart.name"))}</span>` +
       `<span class="value">${esc(p.name)}</span></p>` +
     `<hr class="rule">` +
     `<div class="field-row">` +
-      `<p class="datum"><span class="micro-label">Birth date</span>` +
+      `<p class="datum"><span class="micro-label">${esc(t("chart.birthDate"))}</span>` +
         `<span class="value">${esc(date)}</span></p>` +
-      `<p class="datum"><span class="micro-label">Birth time</span>` +
+      `<p class="datum"><span class="micro-label">${esc(t("chart.birthTime"))}</span>` +
         `<span class="value">${esc(time)}</span></p>` +
     `</div>` +
     `<hr class="rule">` +
-    `<p class="datum"><span class="micro-label">Birth place</span>` +
+    `<p class="datum"><span class="micro-label">${esc(t("chart.birthPlace"))}</span>` +
       `<span class="value">${esc(p.place.displayName)}</span>` +
       `<span class="helper">${esc(p.timezone)}${auto ? " " + t("chart.auto") : ""}</span></p>`;
 }
@@ -925,7 +925,7 @@ function openProfileForm(profile) {
   editingProfileId = profile ? profile.id : null;
   pfPickedPlace = profile ? { ...profile.place } : null;
   pfTzAuto = profile ? profile.timezoneAuto !== false : true;
-  $("profile-form-title").textContent = profile ? "Edit profile" : "New profile";
+  $("profile-form-title").textContent = t(profile ? "chart.editTitle" : "chart.newTitle");
   $("pf-name").value = profile ? profile.name : "";
   $("pf-date").value = profile ? profile.birthDate : "";
   $("pf-time").value = profile && profile.birthTime ? profile.birthTime : "";

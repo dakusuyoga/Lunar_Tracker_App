@@ -303,6 +303,9 @@ export const STRINGS = {
     "chart.lon": "Longitude",
     "chart.timezone": "Timezone",
     "chart.auto": "(auto)",
+    "chart.timeUnknown": "Not known",
+    "chart.editTitle": "Edit profile",
+    "chart.newTitle": "New profile",
 
     /* ── Location ── */
     "loc.title": "Location",
@@ -708,6 +711,9 @@ export const STRINGS = {
     "chart.lon": "Долгота",
     "chart.timezone": "Часовой пояс",
     "chart.auto": "(авто)",
+    "chart.timeUnknown": "Неизвестно",
+    "chart.editTitle": "Изменить карту",
+    "chart.newTitle": "Новая карта",
 
     /* ── Местоположение ── */
     "loc.title": "Местоположение",
