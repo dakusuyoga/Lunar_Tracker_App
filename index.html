@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
+<!-- Access control is noindex-only (deploy runbook, "Resolved decisions").
+     The runbook implements that as an X-Robots-Tag response header from
+     nginx; GitHub Pages cannot set response headers, so on Pages this meta
+     tag and robots.txt are the whole mechanism. Keep both: robots.txt asks
+     crawlers not to fetch, this tells any that fetch anyway not to index. -->
+<meta name="robots" content="noindex, nofollow">
 <title>Lunar Tracker</title>
 <link rel="stylesheet" href="/styles.css">
 </head>
@@ -661,7 +667,7 @@
     <p class="micro-label">About</p>
     <p class="about-line">Lunar Tracker</p>
     <p class="helper">Positions computed with the Swiss Ephemeris, in your browser.</p>
-    <p class="helper">This app is free software under the AGPL-3.0: <a href="#">read or download the source</a>.</p>
+    <p class="helper">This app is free software under the AGPL-3.0: <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" target="_blank" rel="noopener noreferrer">read or download the source</a>.</p>
     <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
   </div>
 </dialog>
