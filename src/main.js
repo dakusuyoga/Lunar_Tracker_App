@@ -1360,6 +1360,8 @@ function wire() {
 
 /* ── Boot ───────────────────────────────────────────────────────── */
 
+if (navigator.brave) document.documentElement.classList.add("brave");
+
 (async () => {
   $("storage-notice").hidden = storageAvailable();
   const loading = $("loading");

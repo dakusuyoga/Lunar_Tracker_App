@@ -838,6 +838,11 @@ span.mark { cursor: default; }
   .columns { grid-template-columns: 1fr; }
 }
 
+/* Brave fails to paint the moon shadow's feGaussianBlur filter, so the shadow
+   vanished and the photo showed fully lit. main.js tags <html class="brave">;
+   a hard terminator beats a white dark side. Safari keeps the soft edge. */
+.brave .moon .moon-shadow { filter: none; fill-opacity: 1; }
+
 /* Phones: no backdrop-filter anywhere. Stacked blur layers (app bar, menu,
    dialog) drop taps, paint panels blank and glitch the moon's SVG filter on
    iOS Safari and mobile Brave. Solid navy reads the same on a dark theme. */
