@@ -12,12 +12,18 @@
    therefore cannot produce a wrong outcome, which matters because the same
    account is used from more than one device. */
 import { supabase } from "./supabase.js";
+import { t } from "./i18n.js";
 
-export const RITUALS = {
-  new_moon_wishing: "New Moon wishing ritual",
-  full_moon_forgiveness: "Full Moon Forgiveness Ceremony",
-  full_moon_gratitude: "Entering a State of Gratitude",
-};
+/* A getter, not a table of words: the stored key is what a completion row
+   holds, so the name has to be resolved at display time to follow the
+   language. RITUAL_KEYS keeps the order for anything that iterates. */
+export const RITUAL_KEYS = ["new_moon_wishing", "full_moon_forgiveness", "full_moon_gratitude"];
+export const RITUALS = new Proxy({}, {
+  get: (_, key) => (typeof key === "string" ? t(`ritual.${key}`) : undefined),
+  has: (_, key) => RITUAL_KEYS.includes(key),
+  ownKeys: () => [...RITUAL_KEYS],
+  getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
+});
 
 /* The lunation's UTC date. Deriving a *date* client-side is safe under
    millisecond jitter between devices; deriving a timestamp would not be. */
@@ -64,5 +70,5 @@ export async function setCompletion(userId, ritual, instant, done, displayTz) {
 export function toggleMarkup(ritual, done) {
   return `<button type="button" class="ritual-toggle${done ? " is-done" : ""}"` +
     ` data-ritual="${ritual}" aria-pressed="${done}">` +
-    `${done ? "Done ✓" : "Mark as done"}</button>`;
+    `${t(done ? "ritual.doneMark" : "ritual.markDone")}</button>`;
 }

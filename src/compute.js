@@ -55,14 +55,14 @@ export const CONJUNCTION_POINTS = [
   "Ascendant", "Descendant", "Midheaven", "ImumCoeli",
 ];
 
-export const POINT_LABELS = {
-  Sun: "Natal Sun", Moon: "Natal Moon", Mercury: "Natal Mercury",
-  Venus: "Natal Venus", Mars: "Natal Mars", Jupiter: "Natal Jupiter",
-  Saturn: "Natal Saturn", Uranus: "Natal Uranus", Neptune: "Natal Neptune",
-  Pluto: "Natal Pluto", NorthNode: "North Node", SouthNode: "South Node",
-  Chiron: "Natal Chiron", Ascendant: "Ascendant", Descendant: "Descendant",
-  Midheaven: "Midheaven", ImumCoeli: "Imum Coeli",
-};
+/* The point keys themselves. Display names live in the string catalogue
+   as `point.<key>`, because they have two languages and this module has
+   no business picking one. */
+export const POINT_KEYS = [
+  "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
+  "Uranus", "Neptune", "Pluto", "NorthNode", "SouthNode", "Chiron",
+  "Ascendant", "Descendant", "Midheaven", "ImumCoeli",
+];
 
 const natalCache = new Map();
 
@@ -233,11 +233,13 @@ function nextPhaseEvents(anchor) {
   return nextEventCache;
 }
 
+/* Returns a KEY, not a word. The display name is a presentation concern
+   and now has two languages; this module has no business picking one. */
 function phaseName(angle) {
-  if (angle < 90) return "Waxing Crescent";
-  if (angle < 180) return "Waxing Gibbous";
-  if (angle < 270) return "Waning Gibbous";
-  return "Waning Crescent";
+  if (angle < 90) return "waxing_crescent";
+  if (angle < 180) return "waxing_gibbous";
+  if (angle < 270) return "waning_gibbous";
+  return "waning_crescent";
 }
 
 /* The moon-context for a check-in: sign, natal house and conjunctions at
@@ -382,10 +384,10 @@ export function computeDay(dateISO, location, natal, mode) {
   const lastQuarter = quarterEvent(270);
 
   let phase = phaseName(phaseAngle);
-  if (newMoonWindow && newMoonWindow.onThisDay) phase = "New Moon";
-  else if (firstQuarter) phase = "Waxing Quarter Moon";
-  else if (fullMoonWindow && fullMoonWindow.onThisDay) phase = "Full Moon";
-  else if (lastQuarter) phase = "Waning Quarter Moon";
+  if (newMoonWindow && newMoonWindow.onThisDay) phase = "new";
+  else if (firstQuarter) phase = "waxing_quarter";
+  else if (fullMoonWindow && fullMoonWindow.onThisDay) phase = "full";
+  else if (lastQuarter) phase = "waning_quarter";
 
   /* New Moon affirmations: active from the exact New Moon instant until 28
      days later, keyed by the natal house of that New Moon. When viewing
@@ -441,7 +443,7 @@ export function computeDay(dateISO, location, natal, mode) {
       const natLon = modal(lonTrop, natal.ayanamsa, mode);
       const orb = Math.abs(wrap180(moonLon - natLon));
       if (orb <= CONJUNCTION_ORB) {
-        conjunctions.push({ key, label: POINT_LABELS[key], orb });
+        conjunctions.push({ key, orb });
       }
     }
     conjunctions.sort((a, b) => a.orb - b.orb);

@@ -21,14 +21,14 @@
     <svg class="boot-glyph" width="46" height="46" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg>
     <p class="brand">Lunar Tracker</p>
     <div class="boot-bar"><span></span></div>
-    <p class="boot-title">Loading the ephemeris</p>
-    <p class="boot-note">584 KB engine &middot; 2 MB sky data. First visit only &mdash; it is cached after this.</p>
+    <p class="boot-title" data-i18n="boot.loading">Loading the ephemeris</p>
+    <p class="boot-note" data-i18n="boot.note">584 KB engine &middot; 2 MB sky data. First visit only &mdash; it is cached after this.</p>
 
     <div class="boot-error" hidden>
-      <h1>The sky didn&rsquo;t finish loading.</h1>
-      <p>The download was interrupted, so the app can&rsquo;t calculate today yet. Nothing is lost &mdash; try again when you have a steadier connection.</p>
-      <button type="button" class="btn btn-primary" data-action="retry-boot">Try again</button>
-      <p class="micro-label">Technical detail</p>
+      <h1 data-i18n="boot.failed">The sky didn&rsquo;t finish loading.</h1>
+      <p data-i18n="boot.failedBody">The download was interrupted, so the app can&rsquo;t calculate today yet. Nothing is lost &mdash; try again when you have a steadier connection.</p>
+      <button type="button" class="btn btn-primary" data-action="retry-boot" data-i18n="boot.retry">Try again</button>
+      <p class="micro-label" data-i18n="boot.detail">Technical detail</p>
       <p class="boot-trace">WasmInstantiationError: failed to fetch /engine/swisseph.wasm<br>net::ERR_CONNECTION_RESET &mdash; 584 KB, 61 KB received<br>attempt 3 of 3</p>
     </div>
   </div>
@@ -103,7 +103,7 @@
       <button type="button" class="btn btn-primary btn-compact" data-action="open-checkin">Check-in</button>
 
       <div class="account">
-        <label class="visually-hidden" for="profile-select">Profile</label>
+        <label class="visually-hidden" for="profile-select" data-i18n="menu.profile">Profile</label>
         <select id="profile-select" name="profile-select" hidden><option>Mara</option></select>
         <button type="button" id="manage-profiles" class="account-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
           <span class="account-name">Mara Ellis</span>
@@ -115,8 +115,8 @@
                a fabricated name and address must never reach a screen. -->
           <p class="menu-head" hidden><span class="menu-name"></span><span class="menu-mail"></span></p>
           <hr class="rule">
-          <button type="button" class="menu-item" role="menuitem" data-dialog="profile-dialog">Your chart</button>
-          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history">History</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="profile-dialog" data-i18n="chart.title">Your chart</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history" data-i18n="menu.history">History</button>
           <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog" data-i18n="menu.location">Location</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display" data-i18n="menu.display">Display</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-data" data-i18n="menu.data">Your data</button>
@@ -191,10 +191,10 @@
             <hr class="rule">
 
             <div class="data-grid">
-              <p class="datum"><span class="micro-label">Moonrise</span><span id="moonrise" class="value">12:10 am</span></p>
-              <p class="datum"><span class="micro-label">Moonset</span><span id="moonset" class="value">4:30 pm</span></p>
-              <p class="datum"><span class="micro-label">Sunrise</span><span id="sunrise" class="value">6:13 am</span></p>
-              <p class="datum"><span class="micro-label">Sunset</span><span id="sunset" class="value">8:32 pm</span></p>
+              <p class="datum"><span class="micro-label" data-i18n="moon.moonrise">Moonrise</span><span id="moonrise" class="value">12:10 am</span></p>
+              <p class="datum"><span class="micro-label" data-i18n="moon.moonset">Moonset</span><span id="moonset" class="value">4:30 pm</span></p>
+              <p class="datum"><span class="micro-label" data-i18n="moon.sunrise">Sunrise</span><span id="sunrise" class="value">6:13 am</span></p>
+              <p class="datum"><span class="micro-label" data-i18n="moon.sunset">Sunset</span><span id="sunset" class="value">8:32 pm</span></p>
             </div>
 
             <p id="next-events" class="next-events">Next: Full Moon on August 28</p>
@@ -216,7 +216,7 @@
 
           <!-- affirmations (JS-populated) -->
           <section id="affirmations" class="panel panel-warm" aria-label="New Moon affirmations">
-            <p class="micro-label">New moon affirmations</p>
+            <p class="micro-label" data-i18n="moon.affirmations">New moon affirmations</p>
             <p class="affirmation">&lsquo;I am going places!&rsquo;</p>
             <hr class="rule">
             <p class="affirmation">&lsquo;It&rsquo;s wonderful to be so successful!&rsquo;</p>
@@ -233,11 +233,11 @@
               <span class="badge">Grounded</span><span class="badge">Reflective</span><span class="badge">Anxious &ndash; nervous</span><span class="badge">Tense</span><span class="badge">Heavy</span>
             </p>
             <p class="meter-row">
-              <span class="datum"><span class="micro-label">Energy</span><span class="value">Low</span></span>
-              <span class="datum"><span class="micro-label">Focus</span><span class="value">Scattered</span></span>
+              <span class="datum"><span class="micro-label" data-i18n="checkin.energy">Energy</span><span class="value">Low</span></span>
+              <span class="datum"><span class="micro-label" data-i18n="checkin.focus">Focus</span><span class="value">Scattered</span></span>
             </p>
             <span class="record-journal" hidden>
-              <span class="micro-label">Journal</span>
+              <span class="micro-label" data-i18n="checkin.journal">Journal</span>
               <span class="journal-text"></span>
             </span>
             <span class="cta" data-i18n="record.open">Open this check-in &rsaquo;</span>
@@ -285,13 +285,13 @@
             </div>
           </details>
 
-          <p class="empty" hidden>No readings for this day.</p>
+          <p class="empty" data-i18n="reading.none" hidden>No readings for this day.</p>
           <p class="none" hidden>No natal conjunctions today</p>
           <p class="transit-note" hidden>Add a birth time to see house placements and angle conjunctions.</p>
         </div>
       </div>
 
-      <footer class="app-footer">Computed in-browser with Swiss Ephemeris &middot; Houses: Placidus (Tropical), Whole Sign (Sidereal) &middot; Place search &copy; OpenStreetMap contributors</footer>
+      <footer class="app-footer" data-i18n-html="footer.all">Computed in-browser with Swiss Ephemeris &middot; Houses: Placidus (Tropical), Whole Sign (Sidereal) &middot; Place search &copy; OpenStreetMap contributors</footer>
     </div>
     </div>
   </section>
@@ -436,29 +436,29 @@
         <button type="button" class="icon-btn" data-action="prev-day" aria-label="Previous day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
         <button type="button" class="icon-btn" data-action="next-day" aria-label="Next day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
         <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg></button>
-        <button type="button" class="ghost-btn" data-action="today">Today</button>
+        <button type="button" class="ghost-btn" data-action="today" data-i18n="date.today">Today</button>
       </div>
 
       <section class="glass moon-card moon-card-compact">
         <div class="moon-head">
           <div class="moon moon-sm" aria-hidden="true"><span class="moon-glow"></span><img class="moon-photo" src="assets/moon.jpg" alt=""><svg viewBox="-70 -70 140 140"><defs><radialGradient id="moon-limb-sm" cx="50%" cy="50%" r="50%"><stop offset="62%" stop-color="#08080A" stop-opacity="0"/><stop offset="88%" stop-color="#08080A" stop-opacity="0.16"/><stop offset="100%" stop-color="#08080A" stop-opacity="0.5"/></radialGradient><filter id="moon-term-sm" x="-45%" y="-45%" width="190%" height="190%"><feGaussianBlur stdDeviation="2.2"/></filter><clipPath id="moon-clip-sm"><circle cx="0" cy="0" r="59.4"/></clipPath></defs><g clip-path="url(#moon-clip-sm)"><circle class="moon-limb" cx="0" cy="0" r="60" fill="url(#moon-limb-sm)"/><path class="moon-shadow" filter="url(#moon-term-sm)" d="M 0 -72 A 72 72 0 0 1 0 72 L 0 60 A 21.60 60 0 0 1 0 -60 Z"/></g><circle class="moon-rim" cx="0" cy="0" r="60"/></svg></div>
           <div class="moon-titles">
-            <p class="micro-label">That day&rsquo;s moon</p>
+            <p class="micro-label" data-i18n="moon.thatDaysMoon">That day&rsquo;s moon</p>
             <h2 class="phase-name">Waning Crescent</h2>
             <p class="illum">32% illuminated</p>
           </div>
           <div class="segmented" role="group" aria-label="Zodiac system">
-            <button type="button" class="seg">Tropical</button>
-            <button type="button" class="seg is-active" aria-pressed="true">Sidereal</button>
+            <button type="button" class="seg" data-i18n="zodiac.tropical">Tropical</button>
+            <button type="button" class="seg is-active" aria-pressed="true" data-i18n="zodiac.sidereal">Sidereal</button>
           </div>
         </div>
         <hr class="rule">
         <div class="data-grid">
-          <p class="datum"><span class="micro-label">Sign</span><span class="value"><span class="glyph">&#9801;&#xFE0E;</span> Taurus &middot; 11&deg;40&prime; &middot; Sidereal</span></p>
-          <p class="datum"><span class="micro-label">House</span><span class="value">9th house</span></p>
-          <p class="datum datum-wide"><span class="micro-label">Transit</span><span class="value conj">Moon &#9738; Natal Chiron <span class="orb">(orb 4.2&deg;)</span></span></p>
+          <p class="datum"><span class="micro-label" data-i18n="record.sign">Sign</span><span class="value"><span class="glyph">&#9801;&#xFE0E;</span> Taurus &middot; 11&deg;40&prime; &middot; Sidereal</span></p>
+          <p class="datum"><span class="micro-label" data-i18n="record.house">House</span><span class="value">9th house</span></p>
+          <p class="datum datum-wide"><span class="micro-label" data-i18n="record.transit">Transit</span><span class="value conj">Moon &#9738; Natal Chiron <span class="orb">(orb 4.2&deg;)</span></span></p>
         </div>
-        <button type="button" class="link-btn" data-action="open-daily">Open this day&rsquo;s reading &rsaquo;</button>
+        <button type="button" class="link-btn" data-action="open-daily" data-i18n="moon.openReading">Open this day&rsquo;s reading &rsaquo;</button>
       </section>
 
       <section class="panel">
@@ -471,15 +471,15 @@
           <span class="datum"><span class="micro-label">Focus</span><span class="value">Scattered</span></span>
         </p>
         <hr class="rule">
-        <p class="micro-label">Journal</p>
+        <p class="micro-label" data-i18n="checkin.journal">Journal</p>
         <p class="journal-text">Slow start, but the afternoon opened up. Long walk after dinner, and the sky was completely clear by the time the moon came up.</p>
       </section>
 
       <section class="panel">
-        <p class="micro-label">Full Moon Rituals</p>
-        <p class="ritual-h">Full moon forgiveness ceremony <span class="mark">Not done</span></p>
-        <p class="ritual-h">Entering a state of gratitude <span class="mark is-done">Done</span></p>
-        <button type="button" class="link-btn" data-action="open-daily">Open the ritual &rsaquo;</button>
+        <p class="micro-label" data-i18n="ritual.fullMoonTitle">Full Moon Rituals</p>
+        <p class="ritual-h">Full moon forgiveness ceremony <span class="mark" data-i18n="ritual.notDone">Not done</span></p>
+        <p class="ritual-h">Entering a state of gratitude <span class="mark is-done" data-i18n="record.done">Done</span></p>
+        <button type="button" class="link-btn" data-action="open-daily" data-i18n="moon.openRitual">Open the ritual &rsaquo;</button>
       </section>
     </div>
   </section>
@@ -498,14 +498,14 @@
     <div id="profile-list-view" hidden>
       <div id="profile-list" class="chart-view"></div>
       <div class="dialog-actions">
-        <button type="button" id="new-profile" class="btn btn-primary">Edit</button>
-        <button type="button" id="close-profiles" class="btn btn-ghost">Close</button>
+        <button type="button" id="new-profile" class="btn btn-primary" data-i18n="btn.edit">Edit</button>
+        <button type="button" id="close-profiles" class="btn btn-ghost" data-i18n="btn.close">Close</button>
       </div>
     </div>
 
     <form id="profile-form" class="form">
-      <h2 id="profile-form-title" class="visually-hidden">Edit your chart</h2>
-      <p id="pf-error" class="field-error" hidden>Check the highlighted fields.</p>
+      <h2 id="profile-form-title" class="visually-hidden" data-i18n="chart.edit">Edit your chart</h2>
+      <p id="pf-error" class="field-error" hidden data-i18n="chart.checkFields">Check the highlighted fields.</p>
 
       <p class="field">
         <label for="pf-name" data-i18n="chart.name">Profile name</label>
@@ -547,12 +547,12 @@
       <p class="field">
         <label for="pf-tz" data-i18n="chart.timezone">Timezone</label>
         <input type="text" id="pf-tz" name="pf-tz" list="tz-list" value="Europe/Berlin">
-        <span id="pf-tz-auto" class="auto-tag">(auto)</span>
+        <span id="pf-tz-auto" class="auto-tag" data-i18n="chart.auto">(auto)</span>
       </p>
 
       <p class="btn-row">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <button type="button" id="pf-cancel" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary" data-i18n="btn.save">Save</button>
+        <button type="button" id="pf-cancel" class="btn btn-ghost" data-i18n="btn.cancel">Cancel</button>
       </p>
     </form>
   </div>
@@ -566,7 +566,7 @@
     <form id="location-form" class="form">
       <p class="micro-label" data-i18n="loc.display">Display location</p>
       <p class="helper" data-i18n="loc.help">Drives moonrise/moonset, sunrise/sunset, and the local calendar day. Your natal chart is unaffected.</p>
-      <p id="loc-error" class="field-error" hidden>Couldn&rsquo;t reach the place search.</p>
+      <p id="loc-error" class="field-error" hidden data-i18n="loc.searchFailed">Couldn&rsquo;t reach the place search.</p>
 
       <p class="field">
         <label for="loc-place" data-i18n="loc.city">City</label>
@@ -576,7 +576,7 @@
       </p>
 
       <details id="loc-manual" class="disclose-block">
-        <summary>Enter coordinates manually</summary>
+        <summary data-i18n="chart.manual">Enter coordinates manually</summary>
         <div class="field-row">
           <p class="field"><label for="loc-lat" data-i18n="chart.lat">Latitude</label><input type="text" id="loc-lat" name="loc-lat" inputmode="decimal" value="43.6532"></p>
           <p class="field"><label for="loc-lon" data-i18n="chart.lon">Longitude</label><input type="text" id="loc-lon" name="loc-lon" inputmode="decimal" value="-79.3832"></p>
@@ -586,12 +586,12 @@
       <p class="field">
         <label for="loc-tz" data-i18n="chart.timezone">Timezone</label>
         <input type="text" id="loc-tz" name="loc-tz" list="tz-list" value="America/Toronto">
-        <span id="loc-tz-auto" class="auto-tag">(auto)</span>
+        <span id="loc-tz-auto" class="auto-tag" data-i18n="chart.auto">(auto)</span>
       </p>
 
       <p class="btn-row">
         <button type="submit" class="btn btn-primary" data-i18n="loc.save">Save location</button>
-        <button type="button" id="loc-cancel" class="btn btn-ghost">Cancel</button>
+        <button type="button" id="loc-cancel" class="btn btn-ghost" data-i18n="btn.cancel">Cancel</button>
       </p>
     </form>
   </div>
@@ -650,17 +650,17 @@
     <hr class="rule">
 
     <p class="micro-label" data-i18n="data.deleteTitle">Delete account</p>
-    <p class="helper">This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and <strong>cannot be undone</strong> &mdash; there is no copy for us to restore from. Download your data first if you want to keep it.</p>
+    <p class="helper" data-i18n-html="data.deleteHelpHtml">This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and <strong>cannot be undone</strong> &mdash; there is no copy for us to restore from. Download your data first if you want to keep it.</p>
 
     <div class="danger-confirm" hidden>
       <p class="field">
-        <label for="delete-confirm">Type <strong>DELETE</strong> to confirm</label>
+        <label for="delete-confirm" data-i18n-html="data.confirmLabelHtml">Type <strong>DELETE</strong> to confirm</label>
         <input type="text" id="delete-confirm" name="delete-confirm" autocomplete="off" spellcheck="false" placeholder="DELETE">
       </p>
       <p class="data-error helper" hidden></p>
       <p class="btn-row">
         <button type="button" class="btn btn-danger" data-action="delete-confirm" data-i18n="data.deleteGo" disabled>Delete everything</button>
-        <button type="button" class="btn btn-ghost" data-action="delete-cancel" data-i18n="data.cancel">Cancel</button>
+        <button type="button" class="btn btn-ghost" data-action="delete-cancel" data-i18n="data.cancel" data-i18n="btn.cancel">Cancel</button>
       </p>
     </div>
 
@@ -677,7 +677,7 @@
     <p class="micro-label" data-i18n="about.title">About</p>
     <p class="about-line">Lunar Tracker</p>
     <p class="helper" data-i18n="about.engine">Positions computed with the Swiss Ephemeris, in your browser.</p>
-    <p class="helper">This app is free software under the AGPL-3.0: <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" target="_blank" rel="noopener noreferrer">read or download the source</a>.</p>
+    <p class="helper" data-i18n-html="about.licenceHtml">This app is free software under the AGPL-3.0: <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" target="_blank" rel="noopener noreferrer">read or download the source</a>.</p>
     <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog" data-i18n="btn.done">Done</button></p>
   </div>
 </dialog>
@@ -706,7 +706,7 @@
       <button type="button" class="cal-day is-future" disabled>8<span class="dot"></span></button>
       <button type="button" class="cal-day is-future" disabled>9<span class="dot"></span></button>
     </div>
-    <p class="empty" hidden>No check-ins this month.</p>
+    <p class="empty" data-i18n="history.empty" hidden>No check-ins this month.</p>
   </div>
 </dialog>
 

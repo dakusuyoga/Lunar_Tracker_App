@@ -5,6 +5,7 @@
    - the browser sends this site's Referer automatically,
    - no bulk queries. https://operations.osmfoundation.org/policies/nominatim/ */
 import tzlookup from "tz-lookup";
+import { t } from "./i18n.js";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 export const DEBOUNCE_MS = 1100;
@@ -90,7 +91,7 @@ export function attachPlaceSearch(inputEl, resultsEl, onPick) {
         const places = await searchPlaces(q, controller.signal);
         resultsEl.innerHTML = "";
         if (!places.length) {
-          resultsEl.innerHTML = `<li class="hint">No results — try the manual coordinates below</li>`;
+          resultsEl.innerHTML = `<li class="hint">${t("geo.noResults")}</li>`;
           return;
         }
         for (const p of places) {
@@ -115,13 +116,12 @@ export function attachPlaceSearch(inputEl, resultsEl, onPick) {
            is exactly how a real birthplace ended up stored as a bare
            lat/lon pair during testing. */
         const msg = e.status === 429
-          ? "The place search is busy — wait a moment and try again."
+          ? t("geo.busy")
           : e.status
-            ? `The place search is unavailable right now (error ${e.status}). Try again shortly.`
-            : "Couldn't reach the place search. Check your connection and try again.";
+            ? t("geo.unavailable", { status: e.status })
+            : t("geo.unreachable");
         resultsEl.innerHTML =
-          `<li class="hint">${msg}<br>Your birthplace is almost certainly listed — ` +
-          `prefer retrying over entering coordinates by hand.</li>`;
+          `<li class="hint">${msg}<br>${t("geo.preferRetry")}</li>`;
       }
     }, DEBOUNCE_MS);
   });

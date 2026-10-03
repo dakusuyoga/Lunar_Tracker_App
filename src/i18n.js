@@ -147,6 +147,14 @@ export function applyStrings(root = document) {
   for (const el of root.querySelectorAll("[data-i18n]")) {
     el.textContent = t(el.dataset.i18n);
   }
+  /* A few strings carry markup they cannot be split around — a <strong>
+     mid-sentence, a link whose text is part of the sentence. Splitting
+     them into fragments would force every language to use the same word
+     order, which is exactly what translation cannot promise. These come
+     from the catalogue in this repo, never from user input. */
+  for (const el of root.querySelectorAll("[data-i18n-html]")) {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  }
   for (const [attr, prop] of [["i18nPh", "placeholder"], ["i18nAria", "aria-label"], ["i18nTitle", "title"]]) {
     const sel = `[data-${prop === "placeholder" ? "i18n-ph" : prop === "title" ? "i18n-title" : "i18n-aria"}]`;
     for (const el of root.querySelectorAll(sel)) {
@@ -226,6 +234,21 @@ export function ordinal(n, form = "nom", lang = currentLang()) {
 
    plural(2, {one: "чек-ин", few: "чек-ина", many: "чек-инов"})  → "чек-ина"
    plural(2, {one: "check-in", other: "check-ins"})              → "check-ins" */
+/* A counted noun, from catalogue keys: `tn("data.nCheckIns", 2)` reads
+   `data.nCheckIns.few` in Russian and `.other` in English. Keeping the
+   forms in the catalogue rather than at the call site is what makes the
+   third Russian form possible — a call site written as `n === 1 ? a : b`
+   has nowhere to put it. */
+export function tn(prefix, n, vars) {
+  const lang = currentLang();
+  let form = "other";
+  try { form = new Intl.PluralRules(lang).select(n); } catch { /* keep other */ }
+  const cat = STRINGS[lang] || {};
+  const key = [`${prefix}.${form}`, `${prefix}.other`, `${prefix}.many`, `${prefix}.one`]
+    .find((k) => k in cat) || `${prefix}.other`;
+  return t(key, { n, ...vars });
+}
+
 export function plural(n, forms, lang = currentLang()) {
   let key = "other";
   try {

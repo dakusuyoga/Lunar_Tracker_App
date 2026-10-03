@@ -109,6 +109,112 @@ export const STRINGS = {
     "about.licence": "This app is free software under the AGPL-3.0:",
     "about.source": "read or download the source",
 
+    "sign.moon_word": "Moon",
+
+    /* ── Errors and states ── */
+    "err.chartUnreachable": "Couldn’t load your chart.",
+    "err.chartUnreachableBody": "We reached your account but not your chart, so we don’t know whether you’ve set one up. Nothing has been changed.",
+    "err.chartCompute": "Couldn’t compute the chart: {reason}",
+    "geo.noResults": "No results — try the manual coordinates below",
+    "geo.busy": "The place search is busy — wait a moment and try again.",
+    "geo.unavailable": "The place search is unavailable right now (error {status}). Try again shortly.",
+    "geo.unreachable": "Couldn’t reach the place search. Check your connection and try again.",
+    "geo.preferRetry": "Your birthplace is almost certainly listed — prefer retrying over entering coordinates by hand.",
+    "geo.selected": "Selected: {place}",
+    "geo.approximate": "— entered as coordinates, so this location is approximate. Search for the place name if you can; it moves the house cusps.",
+    "ritual.newMoonExact": "New Moon exact at {time} — wishes count from then.",
+    "ritual.newMoonOpens": "The New Moon is exact at {time} — the wishing window opens then.",
+    "data.downloaded": "Downloaded — {checkIns} and {rituals}.",
+    "data.nCheckIns.one": "{n} check-in",
+    "data.nCheckIns.other": "{n} check-ins",
+    "data.nRituals.one": "{n} ritual mark",
+    "data.nRituals.other": "{n} ritual marks",
+
+    /* ── Transit panel ── */
+    "transit.orb": "(orb {orb}°)",
+    "transit.noneToday": "No natal conjunctions today",
+    "transit.noProfile": "Create a natal profile to see house placements and conjunctions.",
+    "transit.createProfile": "Create profile",
+    "transit.badData": "This profile’s birth data could not be interpreted ({reason}). Edit the profile to fix it.",
+    "transit.approx": "positions approximate (no birth time)",
+    "transit.addTime": "Add a birth time to see house placements and angle conjunctions.",
+    "reading.none": "No readings for this day.",
+
+    /* ── Natal points ── */
+    "point.Sun": "Natal Sun",
+    "point.Moon": "Natal Moon",
+    "point.Mercury": "Natal Mercury",
+    "point.Venus": "Natal Venus",
+    "point.Mars": "Natal Mars",
+    "point.Jupiter": "Natal Jupiter",
+    "point.Saturn": "Natal Saturn",
+    "point.Uranus": "Natal Uranus",
+    "point.Neptune": "Natal Neptune",
+    "point.Pluto": "Natal Pluto",
+    "point.NorthNode": "North Node",
+    "point.SouthNode": "South Node",
+    "point.Chiron": "Natal Chiron",
+    "point.Ascendant": "Ascendant",
+    "point.Descendant": "Descendant",
+    "point.Midheaven": "Midheaven",
+    "point.ImumCoeli": "Imum Coeli",
+
+    /* ── Moon card ── */
+    "moon.illuminated": "{pct}% illuminated",
+    "moon.exactAt": "Exact at {time}",
+    "moon.next": "Next · {events}",
+    "moon.moonrise": "Moonrise",
+    "moon.moonset": "Moonset",
+    "moon.sunrise": "Sunrise",
+    "moon.sunset": "Sunset",
+    "moon.thatDaysMoon": "That day’s moon",
+    "moon.openReading": "Open this day’s reading ›",
+    "moon.affirmations": "New Moon affirmations",
+    "moon.openRitual": "Open the ritual ›",
+
+    /* ── Eclipses ── */
+    "eclipse.notVisible": "Greatest eclipse {time} · not visible from {where}",
+    "eclipse.sunBelow": " — the Sun is below the horizon",
+    "eclipse.moonBelow": " — the Moon is below the horizon",
+    "eclipse.solarMax": "Maximum {time} · {pct}% of the Sun covered from {where}",
+    "eclipse.lunarMax": "Greatest {time} · {how}, visible from {where}",
+    "eclipse.fullShadow": "the Moon fully in shadow",
+    "eclipse.partShadow": "{pct}% of the Moon in shadow",
+    "eclipse.penumbral": "penumbral only — a faint shading",
+
+    /* ── Phases, extra ── */
+    "phase.waxing_quarter": "Waxing Quarter Moon",
+    "phase.waning_quarter": "Waning Quarter Moon",
+
+    /* ── Boot ── */
+    "boot.note": "584 KB engine · 2 MB sky data. First visit only — it is cached after that.",
+    "boot.failedBody": "The download was interrupted, so the app can’t calculate today yet. Nothing is lost — try again when you have a steadier connection.",
+
+    /* ── Menu, extra ── */
+    "menu.profile": "Profile",
+    "menu.history": "History",
+
+    /* ── Footer ── */
+    "footer.all": "Computed in-browser with Swiss Ephemeris · Houses: Placidus (Tropical), Whole Sign (Sidereal) · Place search © OpenStreetMap contributors",
+    "footer.computed": "Computed in-browser with Swiss Ephemeris",
+    "footer.houses": "Houses: Placidus (Tropical), Whole Sign (Sidereal)",
+    "footer.places": "Place search © OpenStreetMap contributors",
+
+    /* ── Rituals ── */
+    "ritual.notDone": "Not done",
+    "ritual.doneMark": "Done ✓",
+    "ritual.markDone": "Mark as done",
+    "ritual.new_moon_wishing": "New Moon wishing ritual",
+    "ritual.full_moon_forgiveness": "Full Moon Forgiveness Ceremony",
+    "ritual.full_moon_gratitude": "Entering a State of Gratitude",
+    "ritual.newMoonTitle": "New Moon Ritual",
+    "ritual.fullMoonTitle": "Full Moon Rituals",
+
+    /* ── Data dialog, markup ── */
+    "data.deleteHelpHtml": "This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and <strong>cannot be undone</strong> — there is no copy for us to restore from. Download your data first if you want to keep it.",
+    "data.confirmLabelHtml": "Type <strong>DELETE</strong> to confirm",
+    "about.licenceHtml": "This app is free software under the AGPL-3.0: <a href=\"https://github.com/dakusuyoga/Lunar_Tracker_App\" target=\"_blank\" rel=\"noopener noreferrer\">read or download the source</a>.",
+
     /* ── Zodiac signs ──
        Two forms, because Russian needs them: `sign.*` is the name on its
        own ("Телец"), `signIn.*` the form after "Луна в" ("в Тельце") —
@@ -409,6 +515,114 @@ export const STRINGS = {
     "about.engine": "Положения рассчитаны по Swiss Ephemeris прямо в вашем браузере.",
     "about.licence": "Это свободное ПО под лицензией AGPL-3.0:",
     "about.source": "посмотреть или скачать исходный код",
+
+    "sign.moon_word": "Луна",
+
+    /* ── Ошибки и состояния ── */
+    "err.chartUnreachable": "Не удалось загрузить вашу карту.",
+    "err.chartUnreachableBody": "Мы связались с вашим аккаунтом, но не с картой, поэтому не знаем, создана ли она. Ничего не изменено.",
+    "err.chartCompute": "Не удалось рассчитать карту: {reason}",
+    "geo.noResults": "Ничего не найдено — попробуйте ввести координаты ниже",
+    "geo.busy": "Поиск мест занят — подождите немного и попробуйте снова.",
+    "geo.unavailable": "Поиск мест сейчас недоступен (ошибка {status}). Попробуйте чуть позже.",
+    "geo.unreachable": "Не удалось обратиться к поиску мест. Проверьте соединение и попробуйте снова.",
+    "geo.preferRetry": "Ваше место рождения почти наверняка есть в списке — лучше повторить поиск, чем вводить координаты вручную.",
+    "geo.selected": "Выбрано: {place}",
+    "geo.approximate": "— введено координатами, поэтому место приблизительно. По возможности найдите место по названию: это сдвигает куспиды домов.",
+    "ritual.newMoonExact": "Новолуние точно в {time} — желания считаются с этого момента.",
+    "ritual.newMoonOpens": "Новолуние точно в {time} — тогда и откроется окно для желаний.",
+    "data.downloaded": "Скачано — {checkIns} и {rituals}.",
+    "data.nCheckIns.one": "{n} отметка",
+    "data.nCheckIns.few": "{n} отметки",
+    "data.nCheckIns.many": "{n} отметок",
+    "data.nRituals.one": "{n} отметка о ритуале",
+    "data.nRituals.few": "{n} отметки о ритуалах",
+    "data.nRituals.many": "{n} отметок о ритуалах",
+
+    /* ── Панель транзитов ── */
+    "transit.orb": "(орб {orb}°)",
+    "transit.noneToday": "Сегодня натальных соединений нет",
+    "transit.noProfile": "Создайте натальную карту, чтобы видеть дома и соединения.",
+    "transit.createProfile": "Создать карту",
+    "transit.badData": "Данные рождения этой карты не удалось прочитать ({reason}). Измените карту, чтобы исправить.",
+    "transit.approx": "положения приблизительны (нет времени рождения)",
+    "transit.addTime": "Добавьте время рождения, чтобы видеть дома и соединения с углами.",
+    "reading.none": "Текстов на этот день нет.",
+
+    /* ── Натальные точки ── */
+    "point.Sun": "натальное Солнце",
+    "point.Moon": "натальная Луна",
+    "point.Mercury": "натальный Меркурий",
+    "point.Venus": "натальная Венера",
+    "point.Mars": "натальный Марс",
+    "point.Jupiter": "натальный Юпитер",
+    "point.Saturn": "натальный Сатурн",
+    "point.Uranus": "натальный Уран",
+    "point.Neptune": "натальный Нептун",
+    "point.Pluto": "натальный Плутон",
+    "point.NorthNode": "Северный узел",
+    "point.SouthNode": "Южный узел",
+    "point.Chiron": "натальный Хирон",
+    "point.Ascendant": "Асцендент",
+    "point.Descendant": "Десцендент",
+    "point.Midheaven": "МС (середина неба)",
+    "point.ImumCoeli": "IC (глубина неба)",
+
+    /* ── Карточка Луны ── */
+    "moon.illuminated": "освещена на {pct}%",
+    "moon.exactAt": "Точно в {time}",
+    "moon.next": "Далее · {events}",
+    "moon.moonrise": "Восход Луны",
+    "moon.moonset": "Заход Луны",
+    "moon.sunrise": "Восход Солнца",
+    "moon.sunset": "Заход Солнца",
+    "moon.thatDaysMoon": "Луна того дня",
+    "moon.openReading": "Открыть текст этого дня ›",
+    "moon.affirmations": "Аффирмации новолуния",
+    "moon.openRitual": "Открыть ритуал ›",
+
+    /* ── Затмения ── */
+    "eclipse.notVisible": "Максимум затмения в {time} · не видно из {where}",
+    "eclipse.sunBelow": " — Солнце под горизонтом",
+    "eclipse.moonBelow": " — Луна под горизонтом",
+    "eclipse.solarMax": "Максимум в {time} · закрыто {pct}% Солнца, вид из {where}",
+    "eclipse.lunarMax": "Максимум в {time} · {how}, видно из {where}",
+    "eclipse.fullShadow": "Луна полностью в тени",
+    "eclipse.partShadow": "{pct}% Луны в тени",
+    "eclipse.penumbral": "только полутеневое — слабое затенение",
+
+    /* ── Фазы, дополнительно ── */
+    "phase.waxing_quarter": "Первая четверть",
+    "phase.waning_quarter": "Последняя четверть",
+
+    /* ── Загрузка ── */
+    "boot.note": "Движок 584 КБ · данные неба 2 МБ. Только при первом визите — дальше берётся из кэша.",
+    "boot.failedBody": "Загрузка прервалась, поэтому приложение пока не может рассчитать сегодняшний день. Ничего не потеряно — попробуйте снова при более устойчивом соединении.",
+
+    /* ── Меню, дополнительно ── */
+    "menu.profile": "Профиль",
+    "menu.history": "История",
+
+    /* ── Подвал ── */
+    "footer.all": "Рассчитано в браузере по Swiss Ephemeris · Дома: Плацидус (тропический), цельнознаковые (сидерический) · Поиск мест © участники OpenStreetMap",
+    "footer.computed": "Рассчитано в браузере по Swiss Ephemeris",
+    "footer.houses": "Дома: Плацидус (тропический), цельнознаковые (сидерический)",
+    "footer.places": "Поиск мест © участники OpenStreetMap",
+
+    /* ── Ритуалы ── */
+    "ritual.notDone": "Не выполнено",
+    "ritual.doneMark": "Выполнено ✓",
+    "ritual.markDone": "Отметить как выполненное",
+    "ritual.new_moon_wishing": "Ритуал желаний новолуния",
+    "ritual.full_moon_forgiveness": "Церемония прощения в полнолуние",
+    "ritual.full_moon_gratitude": "Вхождение в состояние благодарности",
+    "ritual.newMoonTitle": "Ритуал новолуния",
+    "ritual.fullMoonTitle": "Ритуалы полнолуния",
+
+    /* ── Данные, с разметкой ── */
+    "data.deleteHelpHtml": "Это удалит ваш аккаунт и всё, что в нём: карту, все отметки и все отметки о ритуалах. Произойдёт сразу и <strong>отменить нельзя</strong> — у нас не остаётся копии для восстановления. Если хотите сохранить данные, сначала скачайте их.",
+    "data.confirmLabelHtml": "Введите <strong>DELETE</strong> для подтверждения",
+    "about.licenceHtml": "Это свободное ПО под лицензией AGPL-3.0: <a href=\"https://github.com/dakusuyoga/Lunar_Tracker_App\" target=\"_blank\" rel=\"noopener noreferrer\">посмотреть или скачать исходный код</a>.",
 
     /* ── Знаки зодиака ── */
     "sign.aries": "Овен",

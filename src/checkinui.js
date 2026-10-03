@@ -112,7 +112,14 @@ function unlock() {
     el.disabled = false;
   }
   form.querySelector('button[type="submit"]').hidden = false;
-  if (savedRow) savedRow.hidden = true;
+  if (savedRow) {
+    savedRow.hidden = true;
+    /* The design ships a sample date in this line. lock() replaces it, but
+       only once a row exists — blank it now so a stale "Friday, August 7"
+       can never be on screen, in either language. */
+    const when = savedRow.querySelector(".helper");
+    if (when) when.textContent = "";
+  }
 }
 
 /* ── header button ─────────────────────────────────────────────────── */

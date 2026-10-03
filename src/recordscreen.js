@@ -14,7 +14,7 @@
    Moon changed sign in the afternoon the two legitimately differ, which is
    why the heading says when this was. */
 import { DateTime } from "luxon";
-import { SIGNS, SIGN_GLYPHS, POINT_LABELS } from "./compute.js";
+import { SIGNS, SIGN_GLYPHS } from "./compute.js";
 import { moonShadowPath } from "./moonicon.js";
 import { showScreen } from "./screens.js";
 import { fetchCheckIn } from "./checkin.js";
@@ -43,7 +43,7 @@ function renderMoon(row) {
 
   q(".phase-name").textContent = phaseLabel(row.moon_phase);
   q(".illum").textContent = row.phase_angle == null ? ""
-    : `${Math.round((1 - Math.cos(row.phase_angle * Math.PI / 180)) / 2 * 100)}% illuminated`;
+    : t("moon.illuminated", { pct: Math.round((1 - Math.cos(row.phase_angle * Math.PI / 180)) / 2 * 100) });
 
   // The small moon shows that day's shape, drawn from the stored angle.
   const shadow = q(".moon-shadow");
@@ -75,8 +75,8 @@ function renderMoon(row) {
   }
   parts.push(`<p class="datum datum-wide"><span class="micro-label">${t("record.transit")}</span>` +
     `<span class="value conj">${conj.length
-      ? conj.map((c) => `Moon <span class="glyph">☌︎</span> ${esc(POINT_LABELS[c.point] || c.point)} ` +
-          `<span class="orb">(orb ${Number(c.orb).toFixed(1)}°)</span>`).join("<br>")
+      ? conj.map((c) => `${esc(t("sign.moon_word"))} <span class="glyph">☌︎</span> ${esc(t(`point.${c.point}`))} ` +
+          `<span class="orb">${esc(t("transit.orb", { orb: Number(c.orb).toFixed(1) }))}</span>`).join("<br>")
       : t("record.noConjunctions")}</span></p>`);
 
   q(".data-grid").innerHTML = parts.join("");
@@ -100,8 +100,8 @@ function renderAnswers(row, rituals) {
   badges.hidden = picked.length === 0;
 
   const meters = [];
-  if (row.energy) meters.push(["Energy", labelOf(row.energy)]);
-  if (row.focus) meters.push(["Focus", labelOf(row.focus)]);
+  if (row.energy) meters.push([t("checkin.energy"), labelOf(row.energy)]);
+  if (row.focus) meters.push([t("checkin.focus"), labelOf(row.focus)]);
   const meterRow = q(".meter-row");
   meterRow.innerHTML = meters.map(([k, v]) =>
     `<span class="datum"><span class="micro-label">${k}</span><span class="value">${esc(v)}</span></span>`).join("");

@@ -50,11 +50,11 @@ export function renderRecordCard(row, dateISO, timezone) {
   if (meters) {
     const parts = [];
     if (row.energy) {
-      parts.push(`<span class="datum"><span class="micro-label">Energy</span>` +
+      parts.push(`<span class="datum"><span class="micro-label">${t("checkin.energy")}</span>` +
         `<span class="value">${labelFor(row.energy)}</span></span>`);
     }
     if (row.focus) {
-      parts.push(`<span class="datum"><span class="micro-label">Focus</span>` +
+      parts.push(`<span class="datum"><span class="micro-label">${t("checkin.focus")}</span>` +
         `<span class="value">${labelFor(row.focus)}</span></span>`);
     }
     meters.innerHTML = parts.join("");

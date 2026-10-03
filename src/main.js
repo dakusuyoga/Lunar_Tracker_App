@@ -11,7 +11,7 @@ import {
    `CONTENT` is therefore filled in at boot and swapped when the language
    changes, not imported. It is never read before boot awaits it. */
 import { loadContent, currentLang, setLang, applyStrings, t,
-         fmtDate, fmtTime as fmtTimeDT, ordinal,
+         fmtDate, fmtTime as fmtTimeDT, ordinal, tn,
          DATE_SHORT, DATE_FULL_YEAR, DATE_BIRTH } from "./i18n.js";
 let CONTENT = {};
 import { moonShadowPath } from "./moonicon.js";
@@ -173,27 +173,27 @@ function eventExactLine(day) {
     const where = state.location.displayName;
     if (!loc || !loc.visible) {
       const why = loc && loc.altitude != null && loc.altitude <= 0
-        ? e.kind === "solar" ? " — the Sun is below the horizon" : " — the Moon is below the horizon"
+        ? t(e.kind === "solar" ? "eclipse.sunBelow" : "eclipse.moonBelow")
         : "";
-      return `Greatest eclipse ${fmtTime(e.instant)} · not visible from ${where}${why}`;
+      return t("eclipse.notVisible", { time: fmtTime(e.instant), where }) + why;
     }
     const when = fmtTime(loc.localInstant || e.instant);
     if (e.kind === "solar") {
       const pct = Math.round(loc.obscuration * 100);
-      return `Maximum ${when} · ${pct}% of the Sun covered from ${where}`;
+      return t("eclipse.solarMax", { time: when, pct, where });
     }
     const um = loc.umbralMag;
-    const how = um >= 1 ? "the Moon fully in shadow"
-      : um > 0 ? `${Math.round(um * 100)}% of the Moon in shadow`
-      : "penumbral only — a faint shading";
-    return `Greatest ${when} · ${how}, visible from ${where}`;
+    const how = um >= 1 ? t("eclipse.fullShadow")
+      : um > 0 ? t("eclipse.partShadow", { pct: Math.round(um * 100) })
+      : t("eclipse.penumbral");
+    return t("eclipse.lunarMax", { time: when, how, where });
   }
 
   const ev =
     (day.newMoonWindow && day.newMoonWindow.onThisDay && day.newMoonWindow) ||
     (day.fullMoonWindow && day.fullMoonWindow.onThisDay && day.fullMoonWindow) ||
     day.firstQuarter || day.lastQuarter;
-  return ev ? `Exact at ${fmtTime(ev.instant)}` : "";
+  return ev ? t("moon.exactAt", { time: fmtTime(ev.instant) }) : "";
 }
 
 /* What the phase does next. On a moon app this is the question people
@@ -202,12 +202,12 @@ function nextEventsLine(day) {
   const n = day.nextEvents;
   if (!n) return "";
   const bits = [];
-  if (n.newMoon) bits.push(`New Moon ${fmtDay(n.newMoon)}`);
-  if (n.fullMoon) bits.push(`Full Moon ${fmtDay(n.fullMoon)}`);
+  if (n.newMoon) bits.push(`${t("phase.new")} ${fmtDay(n.newMoon)}`);
+  if (n.fullMoon) bits.push(`${t("phase.full")} ${fmtDay(n.fullMoon)}`);
   if (!bits.length) return "";
   // Soonest first — "next" should read as next.
   if (n.newMoon && n.fullMoon && n.fullMoon < n.newMoon) bits.reverse();
-  return `Next · ${bits.join(" · ")}`;
+  return t("moon.next", { events: bits.join(" · ") });
 }
 
 /* The sign line, in three forms:
@@ -222,7 +222,7 @@ const glyph = (i) => `<span class="glyph">${SIGN_GLYPHS[i]}</span>`;
 /* The zodiac is named as a proper noun in the interface. The stored value
    stays lowercase — it's a state key and a localStorage value, and
    capitalising it would orphan every saved preference. Display only. */
-const modeLabel = () => (state.zodiacMode === "sidereal" ? "Sidereal" : "Tropical");
+const modeLabel = () => t(state.zodiacMode === "sidereal" ? "zodiac.sidereal" : "zodiac.tropical");
 
 /* Sign names come from the catalogue, keyed by the English name
    lower-cased — the same key the content files use. Two accessors
@@ -315,8 +315,8 @@ function activeSegment(segments, anchor) {
 // panel title, only meaningful when a day has more than one segment.
 function segmentRange(segments, i) {
   if (segments.length < 2 || state.showTransitions === false) return "";
-  if (i === 0) return `until ${fmtTime(segments[0].to)}`;
-  if (i === segments.length - 1) return `from ${fmtTime(segments[i].from)}`;
+  if (i === 0) return t("reading.until", { time: fmtTime(segments[0].to) });
+  if (i === segments.length - 1) return t("reading.from", { time: fmtTime(segments[i].from) });
   return `${fmtTime(segments[i].from)} – ${fmtTime(segments[i].to)}`;
 }
 
@@ -364,13 +364,13 @@ function render() {
   const d = moonShadowPath(day.phaseAngle);
   shadow.setAttribute("d", d || "M 0 0");
   shadow.style.display = d ? "" : "none";
-  let phaseLabel = esc(day.phase);
+  let phaseLabel = esc(t(`phase.${day.phase}`));
   if (day.eclipse) {
-    const label = day.eclipse.kind === "solar" ? "Solar Eclipse" : "Lunar Eclipse";
+    const label = t(day.eclipse.kind === "solar" ? "phase.solarEclipse" : "phase.lunarEclipse");
     phaseLabel += ` <span class="badge">${esc(day.eclipse.type)} ${label}</span>`;
   }
   $("phase-name").innerHTML = phaseLabel;
-  $("illum").textContent = `${(day.illum * 100).toFixed(0)}% illuminated`;
+  $("illum").textContent = t("moon.illuminated", { pct: (day.illum * 100).toFixed(0) });
   const exact = eventExactLine(day);
   $("event-exact").textContent = exact;
   $("event-exact").hidden = !exact;
@@ -385,26 +385,26 @@ function render() {
   // Transits: natal house + conjunctions
   let transit = "";
   if (!profile) {
-    transit = `<p class="transit-note">Create a natal profile to see house placements and conjunctions.</p>
-      <button class="cta" id="cta-profile" type="button">＋ Create profile</button>`;
+    transit = `<p class="transit-note">${esc(t("transit.noProfile"))}</p>
+      <button class="cta" id="cta-profile" type="button">＋ ${esc(t("transit.createProfile"))}</button>`;
   } else if (natal.invalid) {
-    transit = `<p class="transit-note">This profile's birth data could not be interpreted (${esc(natal.reason)}). Edit the profile to fix it.</p>`;
+    transit = `<p class="transit-note">${esc(t("transit.badData", { reason: natal.reason }))}</p>`;
   } else {
     // The design heads this panel with its own micro-label, like the others.
-    transit = `<p class="micro-label">Transit</p>`;
+    transit = `<p class="micro-label">${esc(t("record.transit"))}</p>`;
     if (day.house != null) {
       transit += `<p class="transit-house">${houseLine(day)}</p>`;
     }
     if (day.conjunctions.length) {
       transit += day.conjunctions.map((c) =>
-        `<p class="conj">Moon <span class="glyph">☌︎</span> ${esc(c.label)} <span class="orb">(orb ${c.orb.toFixed(1)}°)</span></p>`
+        `<p class="conj">${esc(t("sign.moon_word"))} <span class="glyph">☌︎</span> ${esc(t(`point.${c.key}`))} <span class="orb">${esc(t("transit.orb", { orb: c.orb.toFixed(1) }))}</span></p>`
       ).join("");
     } else {
-      transit += `<p class="conj none">No natal conjunctions today</p>`;
+      transit += `<p class="conj none">${esc(t("transit.noneToday"))}</p>`;
     }
     if (natal.timeUnknown) {
-      transit += `<p class="transit-note">positions approximate (no birth time)</p>`;
-      transit += `<p class="transit-note">Add a birth time to see house placements and angle conjunctions.</p>`;
+      transit += `<p class="transit-note">${esc(t("transit.approx"))}</p>`;
+      transit += `<p class="transit-note">${esc(t("transit.addTime"))}</p>`;
     }
   }
   $("transits").innerHTML = transit;
@@ -418,7 +418,7 @@ function render() {
     const list = (CONTENT.newMoonAffirmations || {})[day.affirmations.house] || [];
     const texts = list.filter((t) => t && String(t).trim());
     // Label, then quotes divided by hairlines — the design's shape.
-    affHTML = `<p class="micro-label">New moon affirmations</p>` +
+    affHTML = `<p class="micro-label">${esc(t("moon.affirmations"))}</p>` +
       texts.map((t) => `<p class="affirmation">‘${esc(t)}’</p>`)
         .join(`<hr class="rule">`);
   }
@@ -487,13 +487,13 @@ function render() {
      the exact New Moon forward — so it is rendered outside the ±12h block
      above. It is generic content: no profile or birth time needed. */
   if (day.wishingWindow) {
-    const timing = `<p class="ritual-timing">New Moon exact at ${esc(fmtTime(day.wishingWindow.instant))} — wishes count from then.</p>`;
-    parts.push(section(esc((CONTENT.newMoonRitual || {}).title || "New Moon Ritual"),
+    const timing = `<p class="ritual-timing">${esc(t("ritual.newMoonExact", { time: fmtTime(day.wishingWindow.instant) }))}</p>`;
+    parts.push(section(esc((CONTENT.newMoonRitual || {}).title || t("ritual.newMoonTitle")),
       timing + ritualContent(CONTENT.newMoonRitual, {}, "new_moon_wishing", ritualsDone),
       "newmoon-ritual"));
   } else if (day.wishingOpensAt) {
     // Don't let the ritual just be missing on the day of the New Moon.
-    parts.push(`<p class="ritual-timing standalone">The New Moon is exact at ${esc(fmtTime(day.wishingOpensAt))} — the wishing window opens then.</p>`);
+    parts.push(`<p class="ritual-timing standalone">${esc(t("ritual.newMoonOpens", { time: fmtTime(day.wishingOpensAt) }))}</p>`);
   }
   if (day.fullMoonWindow) {
     const w = day.fullMoonWindow;
@@ -509,7 +509,7 @@ function render() {
     // something to do tonight, not something to read about afterwards.
     if (day.isToday) {
       const timing = `<p class="ritual-timing">Full Moon exact at ${esc(fmtTime(w.instant))}.</p>`;
-      parts.push(section(esc((CONTENT.fullMoonRitual || {}).title || "Full Moon Ritual"),
+      parts.push(section(esc((CONTENT.fullMoonRitual || {}).title || t("ritual.fullMoonTitle")),
         timing + ritualContent(CONTENT.fullMoonRitual, {
           "Full Moon Forgiveness Ceremony": "full_moon_forgiveness",
           "Entering a State of Gratitude": "full_moon_gratitude",
@@ -518,11 +518,11 @@ function render() {
     }
   }
   if (day.firstQuarter) {
-    parts.push(section(`Waxing Quarter Moon in ${esc(day.firstQuarter.sign)}`,
+    parts.push(section(esc(t("reading.phaseInSign", { phase: t("phase.waxing_quarter"), sign: signInKey(day.firstQuarter.signKey) })),
       contentOr(CONTENT.firstQuarterInSign[day.firstQuarter.signKey])));
   }
   if (day.lastQuarter) {
-    parts.push(section(`Waning Quarter Moon in ${esc(day.lastQuarter.sign)}`,
+    parts.push(section(esc(t("reading.phaseInSign", { phase: t("phase.waning_quarter"), sign: signInKey(day.lastQuarter.signKey) })),
       contentOr(CONTENT.lastQuarterInSign[day.lastQuarter.signKey])));
   }
   /* Re-rendering rebuilds these panels, so carry the open ones across.
@@ -628,15 +628,13 @@ function showProfileUnreachable() {
   const lede = card.querySelector(".lede");
   const cta = card.querySelector(".cta");
   const btn = $("cta-first-run");
-  if (title) title.textContent = "Couldn't load your chart.";
+  if (title) title.textContent = t("err.chartUnreachable");
   if (lede) {
-    lede.textContent =
-      "We reached your account but not your chart, so we don't know whether " +
-      "you've set one up. Nothing has been changed.";
+    lede.textContent = t("err.chartUnreachableBody");
   }
   if (cta) cta.hidden = true;
   if (btn) {
-    btn.textContent = "Try again";
+    btn.textContent = t("boot.retry");
     btn.onclick = () => window.location.reload();
   }
 }
@@ -765,8 +763,10 @@ function wireDataDialog() {
     btn.textContent = t("data.collecting");
     try {
       const { checkIns, rituals } = await exportMyData(account.id);
-      note.textContent = `Downloaded — ${checkIns} check-in${checkIns === 1 ? "" : "s"}` +
-        ` and ${rituals} ritual mark${rituals === 1 ? "" : "s"}.`;
+      note.textContent = t("data.downloaded", {
+        checkIns: tn("data.nCheckIns", checkIns),
+        rituals: tn("data.nRituals", rituals),
+      });
       note.hidden = false;
     } catch (err) {
       console.warn("export failed", err);
@@ -942,10 +942,9 @@ function openProfileForm(profile) {
   } else if (/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(profile.place.displayName.trim())) {
     chosen.innerHTML =
       `Selected: ${esc(profile.place.displayName)} ` +
-      `<span class="hint">— entered as coordinates, so this location is approximate. ` +
-      `Search for the place name if you can; it moves the house cusps.</span>`;
+      `<span class="hint">${esc(t("geo.approximate"))}</span>`;
   } else {
-    chosen.textContent = `Selected: ${profile.place.displayName}`;
+    chosen.textContent = t("geo.selected", { place: profile.place.displayName });
   }
   $("pf-lat").value = profile ? profile.place.latitude : "";
   $("pf-lon").value = profile ? profile.place.longitude : "";
@@ -1048,7 +1047,7 @@ async function pfSubmit(ev) {
       cusps: natal.cusps || null,
     };
   } catch (e) {
-    return fail(`Couldn't compute the chart: ${(e && e.message) || e}`);
+    return fail(t("err.chartCompute", { reason: (e && e.message) || e }));
   }
 
   const submit = $("profile-form").querySelector('button[type="submit"]');
@@ -1284,7 +1283,7 @@ function wire() {
   attachPlaceSearch($("pf-place"), $("pf-place-results"), (place) => {
     pfPickedPlace = place;
     $("pf-place").value = "";
-    $("pf-place-chosen").textContent = `Selected: ${place.displayName}`;
+    $("pf-place-chosen").textContent = t("geo.selected", { place: place.displayName });
     $("pf-lat").value = place.latitude;
     $("pf-lon").value = place.longitude;
     pfSetTimezoneFromCoords();
@@ -1306,7 +1305,7 @@ function wire() {
   attachPlaceSearch($("loc-place"), $("loc-place-results"), (place) => {
     locPickedPlace = place;
     $("loc-place").value = "";
-    $("loc-place-chosen").textContent = `Selected: ${place.displayName}`;
+    $("loc-place-chosen").textContent = t("geo.selected", { place: place.displayName });
     $("loc-lat").value = place.latitude;
     $("loc-lon").value = place.longitude;
     locSetTimezoneFromCoords();
