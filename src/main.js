@@ -6,7 +6,12 @@ import {
   signName, signKey, degInSign,
   natalFor, computeDay,
 } from "./compute.js";
-import { CONTENT } from "./content.js";
+/* The readings are ~134 KB per language, so they are loaded for the
+   chosen language rather than bundled for every language — see i18n.js.
+   `CONTENT` is therefore filled in at boot and swapped when the language
+   changes, not imported. It is never read before boot awaits it. */
+import { loadContent, currentLang, setLang, LANGUAGES } from "./i18n.js";
+let CONTENT = {};
 import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
 import { attachPlaceSearch, timezoneFor } from "./geocode.js";
@@ -1301,6 +1306,29 @@ function wire() {
     locTzAuto = false;
     $("loc-tz-auto").hidden = true;
   });
+  /* Language. Switching swaps the loaded content and re-renders — no
+     reload, so the day on screen and any open panel stay put. The first
+     switch fetches that language's chunk; it is cached after that. */
+  const langButtons = [...document.querySelectorAll("[data-lang]")];
+  const paintLang = () => {
+    const now = currentLang();
+    for (const b of langButtons) {
+      const on = b.dataset.lang === now;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-pressed", String(on));
+    }
+  };
+  for (const b of langButtons) {
+    b.addEventListener("click", async () => {
+      if (b.dataset.lang === currentLang()) return;
+      setLang(b.dataset.lang);
+      paintLang();
+      CONTENT = await loadContent();
+      render();
+    });
+  }
+  paintLang();
+
   // Applies immediately, independent of the Save/Cancel buttons.
   $("opt-affirmations").addEventListener("change", (e) => {
     state.showAffirmations = e.target.checked;
@@ -1354,6 +1382,12 @@ function wire() {
   const enginePromise = initEphemeris();
   const sessionPromise = currentSession();
 
+  /* The readings are needed by the first render, so this is awaited
+     before it — but started here, alongside the engine, so it costs no
+     extra wall-clock time. */
+  document.documentElement.lang = currentLang();
+  const contentPromise = loadContent().then((c) => { CONTENT = c; });
+
   try {
     await enginePromise;
   } catch (e) {
@@ -1383,6 +1417,8 @@ function wire() {
   /* Hard gate: no session, no app. The moon maths would run without an
      account, but a check-in has nowhere to go, and the design treats the
      logged-out state as the front door rather than a degraded daily view. */
+  await contentPromise;   // the first render reads CONTENT
+
   const session = await sessionPromise;
   await applySession(session);
 

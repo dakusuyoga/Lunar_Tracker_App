@@ -937,3 +937,10 @@ span.mark { cursor: default; }
 .danger-confirm .field { margin-top: 0; }
 .data-note, .data-error { display: block; margin-top: 12px; }
 .data-error { color: var(--danger); }
+
+/* --------------------------------------------- 19. LANGUAGE (V3) */
+/* The other Display rows pair text with a small switch; a two-button
+   segmented control is wide enough to squeeze the text, so it takes its
+   own line underneath instead of competing for the row. */
+.lang-row { display: block; }
+.lang-row .segmented { display: inline-flex; margin-top: 14px; }
