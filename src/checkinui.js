@@ -93,6 +93,16 @@ function lock(row) {
   }
   form.querySelector('button[type="submit"]').hidden = true;
   if (savedRow) savedRow.hidden = false;
+
+  /* The design ships a sample date in this line. Nothing was replacing it,
+     so every saved check-in claimed to be "Friday, August 7" — and the
+     calendar, which reads the real `checkin_date`, disagreed with it. */
+  const when = savedRow && savedRow.querySelector(".helper");
+  if (when && row && row.checkin_date) {
+    const tz = row.display_tz || ctx.location().timezone;
+    const d = DateTime.fromISO(row.checkin_date, { zone: tz });
+    when.textContent = `Recorded for ${d.toFormat("cccc, LLLL d")}.`;
+  }
 }
 
 function unlock() {

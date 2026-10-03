@@ -625,6 +625,13 @@ function showProfileUnreachable() {
 let account = null;
 let profileRow = null;
 
+/* applySession runs on boot AND on every auth event Supabase emits —
+   INITIAL_SESSION, SIGNED_IN, each TOKEN_REFRESHED. Anything inside it that
+   attaches a listener would attach another copy each time, so the calendar's
+   month arrows stepped once per past session event: three listeners meant
+   October jumped to July. These wire the DOM once. */
+let listenersWired = false;
+
 /* Which screen a session implies: no session → login; session but no chart
    yet → first run; otherwise the daily view. */
 async function applySession(session) {
@@ -676,17 +683,22 @@ async function applySession(session) {
   startOutbox(supabase);
   await syncTodayState();
 
-  initHistory({
-    userId: account.id,
-    timezone: state.location.timezone,
-    onPick: (dateISO) => setDate(dateISO),
-  });
+  if (!listenersWired) {
+    listenersWired = true;
+    /* Neither is frozen to this session: the record screen takes getters,
+       and openHistory re-sends the account and timezone on every open. */
+    initHistory({
+      userId: account.id,
+      timezone: state.location.timezone,
+      onPick: (dateISO) => setDate(dateISO),
+    });
 
-  initRecordScreen({
-    userId: () => account.id,
-    timezone: () => state.location.timezone,
-    selectedDate: () => selectedDate,
-  });
+    initRecordScreen({
+      userId: () => account.id,
+      timezone: () => state.location.timezone,
+      selectedDate: () => selectedDate,
+    });
+  }
 
   /* Any check-in saved while the engine was cold gets its moon-context
      now. Runs once per session, in the background: it changes nothing the
