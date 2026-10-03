@@ -20,7 +20,8 @@ import { attachPlaceSearch, timezoneFor } from "./geocode.js";
 import { supabase, currentSession } from "./supabase.js";
 import { initAuth, signOut, refreshAuthCopy } from "./auth.js";
 import { showScreen, currentScreen } from "./screens.js";
-import { openOnboarding, closeOnboarding, hasSeenOnboarding, isOnboardingOpen } from "./onboarding.js";
+import { openOnboarding, closeOnboarding, hasSeenOnboarding, isOnboardingOpen,
+         refreshOnboardingCopy } from "./onboarding.js";
 import {
   fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
 } from "./profile.js";
@@ -1382,7 +1383,8 @@ function wire() {
       setLang(b.dataset.lang);
       paintLang();
       applyStrings();
-      refreshAuthCopy();   // its heading and button are module-owned
+      refreshAuthCopy();          // its heading and button are module-owned
+      refreshOnboardingCopy();   // likewise its Back/Next/step counter
       CONTENT = await loadContent();
       /* The switch also lives on login and first run, where there is no
          chart to draw and render() has nothing to work from. The chrome

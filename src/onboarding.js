@@ -93,6 +93,15 @@ function leave(act) {
 }
 
 /* Programmatic close, for sign-out: no callbacks, nothing marked seen. */
+/* Back/Next/Skip and the step counter are written by render(), so
+   applyStrings cannot reach them — the same gap auth.js has. Called on a
+   language change; a no-op unless the carousel is actually open. */
+export function refreshOnboardingCopy() {
+  if (!dlg || !dlg.open) return;
+  applyStrings(dlg);
+  render();
+}
+
 export function closeOnboarding() {
   ctx = null;
   if (dlg?.open) dlg.close();
