@@ -386,6 +386,7 @@ textarea { resize: vertical; line-height: 1.7; background: var(--navy-well); }
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 9px;
 }
 .affix-btn svg { fill: none; stroke: var(--ink-muted); stroke-width: 1.2; }
+.affix-btn[aria-pressed="true"] .eye-slash { display: none; }
 
 .field-error { display: block; margin-top: 9px; font-size: 13px; line-height: 1.5; color: var(--danger); }
 .field-error:not([hidden]) ~ input, input[aria-invalid="true"] { border-color: rgba(227,154,147,.65); }
