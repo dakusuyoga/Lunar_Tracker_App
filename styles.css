@@ -768,7 +768,9 @@ span.mark { cursor: default; }
   max-height: calc(100vh - 24px);
   max-height: calc(100dvh - 24px);
 }
-.dialog[open] { display: flex; flex-direction: column; }
+/* The dialog itself scrolls (a scroller inside a blurred, animated card
+   renders blank or won't scroll on iOS Safari). */
+.dialog { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .dialog::backdrop { background: rgba(6, 8, 20, .62); }
 .dialog-card {
   border-radius: 24px;
@@ -776,10 +778,6 @@ span.mark { cursor: default; }
   background: var(--navy-glass-strong);
   box-shadow: var(--glass-highlight), 0 40px 90px rgba(4,6,16,.6);
   animation: rise .26s ease both;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 .dialog-head { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
 .dialog-title {
@@ -838,6 +836,18 @@ span.mark { cursor: default; }
 /* --------------------------------------------------------- 16. RESPONSIVE */
 @media (max-width: 899px) {
   .columns { grid-template-columns: 1fr; }
+}
+
+/* Phones: no backdrop-filter anywhere. Stacked blur layers (app bar, menu,
+   dialog) drop taps, paint panels blank and glitch the moon's SVG filter on
+   iOS Safari and mobile Brave. Solid navy reads the same on a dark theme. */
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  .glass, .menu, .dialog-card, .app-bar {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .glass { background: var(--navy-panel); }
+  .dialog-card, .menu { background: var(--navy-panel); animation: none; }
+  .app-bar { background: var(--navy-panel); }
 }
 
 @media (max-width: 640px) {
