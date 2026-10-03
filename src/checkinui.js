@@ -12,7 +12,7 @@ import { DateTime } from "luxon";
 import { buildCheckIn, saveCheckIn, fetchCheckIn } from "./checkin.js";
 import { pendingFor } from "./outbox.js";
 import { showScreen } from "./screens.js";
-import { t } from "./i18n.js";
+import { t, fmtDate } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 const MULTI = new Set(["emotion", "body"]);
@@ -102,7 +102,7 @@ function lock(row) {
   if (when && row && row.checkin_date) {
     const tz = row.display_tz || ctx.location().timezone;
     const d = DateTime.fromISO(row.checkin_date, { zone: tz });
-    when.textContent = `Recorded for ${d.toFormat("cccc, LLLL d")}.`;
+    when.textContent = t("checkin.recordedFor", { date: fmtDate(d) });
   }
 }
 
@@ -132,8 +132,7 @@ export async function openCheckIn() {
   const date = todayISO();
   const title = screen.querySelector(".display-title");
   if (title) {
-    title.textContent = "Daily check-in — " +
-      DateTime.fromISO(date).toFormat("cccc, LLLL d");
+    title.textContent = t("checkin.title", { date: fmtDate(DateTime.fromISO(date)) });
   }
 
   // The outbox copy is authoritative for "already done today": it exists
@@ -151,7 +150,7 @@ async function onSubmit(e) {
 
   const submit = form.querySelector('button[type="submit"]');
   submit.disabled = true;
-  submit.textContent = "Saving…";
+  submit.textContent = t("checkin.saving");
 
   try {
     const row = buildCheckIn({
@@ -170,18 +169,16 @@ async function onSubmit(e) {
        when it hasn't reached the server yet, rather than implying failure. */
     const note = screen.querySelector(".saved-title");
     if (note) {
-      note.textContent = synced
-        ? "Saved"
-        : "Saved on this device — it will sync when you're back online";
+      note.textContent = t(synced ? "checkin.saved" : "checkin.savedOffline");
     }
   } catch (err) {
     console.error(err);
     submit.disabled = false;
-    submit.textContent = "Save check-in";
+    submit.textContent = t("checkin.save");
     return;
   }
   submit.disabled = false;
-  submit.textContent = "Save check-in";
+  submit.textContent = t("checkin.save");
 }
 
 /* `context` gives this module live access to state owned by main.js

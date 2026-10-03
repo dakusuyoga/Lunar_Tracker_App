@@ -209,7 +209,7 @@
 
           <!-- transits (JS-populated; markup below shows the shape it injects) -->
           <section id="transits" class="panel" aria-label="Transits">
-            <p class="micro-label">Transit</p>
+            <p class="micro-label" data-i18n="record.transit">Transit</p>
             <p class="transit-house">Moon transiting the 9th house <span class="ingress">&rarr; 10th from 6:40 pm</span></p>
             <p class="conj">Moon &#9738; Natal Chiron <span class="orb">(orb 4.2&deg;)</span></p>
           </section>
@@ -228,7 +228,7 @@
           <!-- V2: the saved check-in card. Inert until the backend exists —
                hidden so the daily view never shows invented data. -->
           <button type="button" class="panel record-card" data-action="open-record" hidden>
-            <p class="record-head"><span class="micro-label">Your check-in</span><span class="record-date">Friday, August 7</span></p>
+            <p class="record-head"><span class="micro-label" data-i18n="record.yourCheckin">Your check-in</span><span class="record-date">Friday, August 7</span></p>
             <p class="badge-row">
               <span class="badge">Grounded</span><span class="badge">Reflective</span><span class="badge">Anxious &ndash; nervous</span><span class="badge">Tense</span><span class="badge">Heavy</span>
             </p>
@@ -240,7 +240,7 @@
               <span class="micro-label">Journal</span>
               <span class="journal-text"></span>
             </span>
-            <span class="cta">Open this check-in &rsaquo;</span>
+            <span class="cta" data-i18n="record.open">Open this check-in &rsaquo;</span>
           </button>
         </div>
 
@@ -299,16 +299,16 @@
   <!-- ------------------------------------------------------ CHECK-IN -->
   <section id="screen-checkin" class="screen" hidden>
     <div class="wrap wrap-narrow">
-      <button type="button" class="back-btn" data-action="open-daily"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg><span>Back to today</span></button>
+      <button type="button" class="back-btn" data-action="open-daily"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg><span data-i18n="date.backToToday">Back to today</span></button>
       <h1 class="display-title">Daily check-in &mdash; Friday, August 7</h1>
-      <p class="lede">Log as much or as little as you like. Every field is optional.</p>
+      <p class="lede" data-i18n="checkin.lede">Log as much or as little as you like. Every field is optional.</p>
 
       <form class="checkin-form">
         <fieldset class="panel">
-          <legend class="micro-label">Emotions</legend>
-          <p class="helper">Select any that fit.</p>
+          <legend class="micro-label" data-i18n="checkin.emotions">Emotions</legend>
+          <p class="helper" data-i18n="checkin.selectAny">Select any that fit.</p>
 
-          <p class="quadrant-label">High energy &middot; pleasant</p>
+          <p class="quadrant-label" data-i18n="checkin.q.highPleasant">High energy &middot; pleasant</p>
           <div class="chips">
             <button type="button" class="chip" data-field="emotion" data-value="anxious_excited" aria-pressed="false">Anxious &ndash; excited</button>
             <button type="button" class="chip" data-field="emotion" data-value="inspired" aria-pressed="false">Inspired</button>
@@ -318,7 +318,7 @@
             <button type="button" class="chip" data-field="emotion" data-value="playful" aria-pressed="false">Playful</button>
           </div>
 
-          <p class="quadrant-label">High energy &middot; unpleasant</p>
+          <p class="quadrant-label" data-i18n="checkin.q.highUnpleasant">High energy &middot; unpleasant</p>
           <div class="chips">
             <button type="button" class="chip" data-field="emotion" data-value="anxious_nervous" aria-pressed="false">Anxious &ndash; nervous</button>
             <button type="button" class="chip" data-field="emotion" data-value="overwhelmed" aria-pressed="false">Overwhelmed</button>
@@ -327,7 +327,7 @@
             <button type="button" class="chip" data-field="emotion" data-value="self_doubting" aria-pressed="false">Self-doubting</button>
           </div>
 
-          <p class="quadrant-label">Low energy &middot; pleasant</p>
+          <p class="quadrant-label" data-i18n="checkin.q.lowPleasant">Low energy &middot; pleasant</p>
           <div class="chips">
             <button type="button" class="chip" data-field="emotion" data-value="grounded" aria-pressed="false">Grounded</button>
             <button type="button" class="chip" data-field="emotion" data-value="attuned" aria-pressed="false">Attuned</button>
@@ -336,7 +336,7 @@
             <button type="button" class="chip" data-field="emotion" data-value="content" aria-pressed="false">Content</button>
           </div>
 
-          <p class="quadrant-label">Low energy &middot; unpleasant</p>
+          <p class="quadrant-label" data-i18n="checkin.q.lowUnpleasant">Low energy &middot; unpleasant</p>
           <div class="chips">
             <button type="button" class="chip" data-field="emotion" data-value="sad" aria-pressed="false">Sad</button>
             <button type="button" class="chip" data-field="emotion" data-value="empty" aria-pressed="false">Empty</button>
@@ -345,7 +345,7 @@
             <button type="button" class="chip" data-field="emotion" data-value="discouraged" aria-pressed="false">Discouraged</button>
           </div>
 
-          <p class="quadrant-label">Neutral</p>
+          <p class="quadrant-label" data-i18n="checkin.q.neutral">Neutral</p>
           <div class="chips">
             <button type="button" class="chip" data-field="emotion" data-value="neutral" aria-pressed="false">Neutral</button>
             <button type="button" class="chip" data-field="emotion" data-value="nostalgic" aria-pressed="false">Nostalgic</button>
@@ -356,8 +356,8 @@
         </fieldset>
 
         <fieldset class="panel">
-          <legend class="micro-label">Body</legend>
-          <p class="helper">Select any that fit.</p>
+          <legend class="micro-label" data-i18n="checkin.body">Body</legend>
+          <p class="helper" data-i18n="checkin.selectAny">Select any that fit.</p>
           <div class="chips">
             <button type="button" class="chip" data-field="body" data-value="headachey" aria-pressed="false">Headachey</button>
             <button type="button" class="chip" data-field="body" data-value="nauseous" aria-pressed="false">Nauseous</button>
@@ -373,8 +373,8 @@
         </fieldset>
 
         <fieldset class="panel">
-          <legend class="micro-label">Energy</legend>
-          <p class="helper">Optional.</p>
+          <legend class="micro-label" data-i18n="checkin.energy">Energy</legend>
+          <p class="helper" data-i18n="checkin.optional">Optional.</p>
           <div class="ladder">
             <button type="button" class="rung" data-field="energy" data-value="fatigued" aria-pressed="false"><span class="bar" style="--rung:1"></span><span>Fatigued / Exhausted</span></button>
             <button type="button" class="rung" data-field="energy" data-value="low" aria-pressed="false"><span class="bar" style="--rung:2"></span><span>Low</span></button>
@@ -382,16 +382,16 @@
             <button type="button" class="rung" data-field="energy" data-value="energized" aria-pressed="false"><span class="bar" style="--rung:4"></span><span>Energized</span></button>
             <button type="button" class="rung" data-field="energy" data-value="wired" aria-pressed="false"><span class="bar" style="--rung:5"></span><span>Wired</span></button>
           </div>
-          <p class="off-scale"><span>Off the scale</span></p>
+          <p class="off-scale"><span data-i18n="checkin.offScale">Off the scale</span></p>
           <div class="chips chips-inline">
             <button type="button" class="chip" data-field="energy" data-value="fluctuating" aria-pressed="false">Fluctuating</button>
-            <span class="helper">Describes variability through the day, not a level.</span>
+            <span class="helper" data-i18n="checkin.fluctuatingHelp">Describes variability through the day, not a level.</span>
           </div>
         </fieldset>
 
         <fieldset class="panel">
-          <legend class="micro-label">Focus</legend>
-          <p class="helper">Optional.</p>
+          <legend class="micro-label" data-i18n="checkin.focus">Focus</legend>
+          <p class="helper" data-i18n="checkin.optional">Optional.</p>
           <div class="chips">
             <button type="button" class="chip chip-lg" data-field="focus" data-value="scattered" aria-pressed="false">Scattered</button>
             <button type="button" class="chip chip-lg" data-field="focus" data-value="present" aria-pressed="false">Present</button>
@@ -400,27 +400,27 @@
         </fieldset>
 
         <p class="panel">
-          <label class="micro-label" for="journal">Journal</label>
-          <textarea id="journal" name="journal" rows="5" placeholder="Anything you want to note about today…"></textarea>
+          <label class="micro-label" for="journal" data-i18n="checkin.journal">Journal</label>
+          <textarea id="journal" name="journal" rows="5" placeholder="Anything you want to note about today…" data-i18n-ph="checkin.journalPlaceholder"></textarea>
         </p>
 
         <p class="save-row">
-          <button type="submit" class="btn btn-primary">Save check-in</button>
-          <span class="helper">Nothing selected yet &mdash; that&rsquo;s fine.</span>
+          <button type="submit" class="btn btn-primary" data-i18n="checkin.save">Save check-in</button>
+          <span class="helper" data-i18n="checkin.nothingYet">Nothing selected yet &mdash; that&rsquo;s fine.</span>
         </p>
 
         <div class="panel confirm" hidden>
-          <p class="confirm-title">Set this down for today?</p>
-          <p class="helper">A saved check-in can&rsquo;t be changed afterwards &mdash; it records how the day actually felt.</p>
+          <p class="confirm-title" data-i18n="checkin.confirmTitle">Set this down for today?</p>
+          <p class="helper" data-i18n="checkin.confirmHelp">A saved check-in can&rsquo;t be changed afterwards &mdash; it records how the day actually felt.</p>
           <p class="btn-row">
-            <button type="button" class="btn btn-primary">Save it</button>
-            <button type="button" class="btn btn-ghost">Keep editing</button>
+            <button type="button" class="btn btn-primary" data-i18n="checkin.confirmSave">Save it</button>
+            <button type="button" class="btn btn-ghost" data-i18n="checkin.keepEditing">Keep editing</button>
           </p>
         </div>
 
         <p class="panel saved-row" hidden>
           <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path d="M6 10.2 L8.9 13 L14.2 7"/></svg>
-          <span><span class="saved-title">Saved</span><span class="helper">Recorded for Friday, August 7.</span></span>
+          <span><span class="saved-title" data-i18n="checkin.saved">Saved</span><span class="helper">Recorded for Friday, August 7.</span></span>
         </p>
       </form>
     </div>
@@ -429,7 +429,7 @@
   <!-- -------------------------------------------------- SAVED RECORD -->
   <section id="screen-record" class="screen" hidden>
     <div class="wrap wrap-narrow">
-      <button type="button" class="back-btn" data-action="open-daily"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg><span>Back to daily view</span></button>
+      <button type="button" class="back-btn" data-action="open-daily"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg><span data-i18n="date.backToDaily">Back to daily view</span></button>
       <h1 class="display-title">Your check-in &mdash; Friday, August 7</h1>
 
       <div class="date-controls">
@@ -462,7 +462,7 @@
       </section>
 
       <section class="panel">
-        <p class="record-head"><span class="micro-label">Your check-in</span><span class="record-date">Friday, August 7</span></p>
+        <p class="record-head"><span class="micro-label" data-i18n="record.yourCheckin">Your check-in</span><span class="record-date">Friday, August 7</span></p>
         <p class="badge-row">
           <span class="badge">Grounded</span><span class="badge">Reflective</span><span class="badge">Anxious &ndash; nervous</span><span class="badge">Tense</span><span class="badge">Heavy</span>
         </p>

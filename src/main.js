@@ -10,7 +10,9 @@ import {
    chosen language rather than bundled for every language — see i18n.js.
    `CONTENT` is therefore filled in at boot and swapped when the language
    changes, not imported. It is never read before boot awaits it. */
-import { loadContent, currentLang, setLang, applyStrings, t } from "./i18n.js";
+import { loadContent, currentLang, setLang, applyStrings, t,
+         fmtDate, fmtTime as fmtTimeDT,
+         DATE_SHORT, DATE_FULL_YEAR, DATE_BIRTH } from "./i18n.js";
 let CONTENT = {};
 import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
@@ -158,7 +160,7 @@ function section(title, body, kind) {
 }
 
 const fmtDay = (date) =>
-  DateTime.fromJSDate(date).setZone(state.location.timezone).toFormat("LLL d");
+  fmtDate(DateTime.fromJSDate(date).setZone(state.location.timezone), DATE_SHORT);
 
 /* The moment a phase event is exact, and — for eclipses — what it actually
    looks like from here. The catalogued eclipse type is global: telling
@@ -326,10 +328,11 @@ function segmentsToRender(segments, day) {
 
 let affirmationTimer = null;
 
+/* Takes a JS Date, where the shared helper takes a DateTime — hence the
+   local wrapper rather than using the import directly. */
 function fmtTime(date) {
   if (!date) return "—";
-  return DateTime.fromJSDate(date).setZone(state.location.timezone)
-    .toFormat("h:mm a").toLowerCase();
+  return fmtTimeDT(DateTime.fromJSDate(date).setZone(state.location.timezone));
 }
 
 function render() {
@@ -338,7 +341,7 @@ function render() {
   const day = computeDay(selectedDate, state.location, natal, state.zodiacMode);
 
   // Date head
-  $("date-display").textContent = day.noonDT.toFormat("cccc, LLLL d, yyyy");
+  $("date-display").textContent = fmtDate(day.noonDT, DATE_FULL_YEAR);
   $("date-input").value = selectedDate;
 
   // Astronomical card
@@ -868,7 +871,7 @@ function renderProfileList() {
   const p = state.profiles[0];
   if (!p) { box.innerHTML = ""; return; }
 
-  const date = DateTime.fromISO(p.birthDate).toFormat("d LLLL yyyy");
+  const date = fmtDate(DateTime.fromISO(p.birthDate), DATE_BIRTH);
   const time = p.timeUnknown ? "Not known" : p.birthTime;
 
   /* "(auto)" is only truthful when the zone really is the one the

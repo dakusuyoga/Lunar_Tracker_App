@@ -153,8 +153,46 @@ export function applyStrings(root = document) {
       el.setAttribute(prop, t(el.dataset[attr]));
     }
   }
+  /* The 45 check-in chips already carry the value they store, so the
+     code IS the key — `vocab.joyful` — and they need no marks of their
+     own. A rung wraps its text in a span beside the bar, so the label
+     node is the last element child when there is one. */
+  for (const el of root.querySelectorAll("[data-field][data-value]")) {
+    const label = el.querySelector("span:last-child") || el;
+    label.textContent = t(`vocab.${el.dataset.value}`);
+  }
+
   document.documentElement.lang = currentLang();
 }
+
+/* ── Dates and times ─────────────────────────────────────────────────
+   Always through these, never `toFormat` with a literal pattern.
+
+   A pattern hard-codes one language's grammar. "cccc, LLLL d" is right
+   in English and wrong twice over in Russian: the order is reversed
+   ("2 октября", not "октябрь 2"), and the month takes the genitive —
+   Luxon's `LLLL` is the standalone form and yields "октябрь", the
+   nominative, which reads like a heading rather than a date.
+
+   `toLocaleString` with option objects asks the platform for the whole
+   convention instead, so English keeps "October 2" while Russian gets
+   "2 октября" — same call, no per-language branch here. */
+
+export const DATE_FULL = { weekday: "long", month: "long", day: "numeric" };
+export const DATE_FULL_YEAR = { weekday: "long", month: "long", day: "numeric", year: "numeric" };
+export const DATE_SHORT = { month: "short", day: "numeric" };
+export const DATE_BIRTH = { day: "numeric", month: "long", year: "numeric" };
+export const MONTH_YEAR = { month: "long", year: "numeric" };
+export const TIME_HM = { hour: "numeric", minute: "2-digit" };
+
+export const fmtDate = (dt, opts = DATE_FULL, lang = currentLang()) =>
+  dt.setLocale(lang).toLocaleString(opts);
+
+/* English renders "9:45 PM"; the app's typography wants it lowercase.
+   Russian is a 24-hour locale with no marker to lowercase, so this is a
+   no-op there rather than a special case. */
+export const fmtTime = (dt, lang = currentLang()) =>
+  dt.setLocale(lang).toLocaleString(TIME_HM).toLowerCase();
 
 /* ── Counting ────────────────────────────────────────────────────── */
 

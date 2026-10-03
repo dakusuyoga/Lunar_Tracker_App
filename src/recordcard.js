@@ -9,20 +9,14 @@
    offline, because a missed day can never be recovered), so reading labels
    from the same place keeps one source of truth in the frontend. */
 import { DateTime } from "luxon";
+import { t, fmtDate } from "./i18n.js";
 
-let labels = null;
-
-function labelFor(value) {
-  if (!labels) {
-    labels = new Map();
-    for (const el of document.querySelectorAll("#screen-checkin [data-value][data-field]")) {
-      // The ladder rungs wrap their text in a span alongside the bar.
-      const text = (el.querySelector("span:last-child") || el).textContent.trim();
-      labels.set(el.dataset.value, text);
-    }
-  }
-  return labels.get(value) || value;
-}
+/* Labels come from the string catalogue, keyed by the value the row
+   stores — the same source the chips themselves render from, so there is
+   still one source of truth, and it follows the language. An earlier
+   version read the chips' DOM text and cached it; that cache survived a
+   language switch and kept showing the old language. */
+const labelFor = (value) => t(`vocab.${value}`);
 
 export function renderRecordCard(row, dateISO, timezone) {
   const card = document.querySelector(".record-card");
@@ -35,8 +29,7 @@ export function renderRecordCard(row, dateISO, timezone) {
 
   const date = card.querySelector(".record-date");
   if (date) {
-    date.textContent = DateTime.fromISO(dateISO, { zone: timezone })
-      .toFormat("cccc, LLLL d");
+    date.textContent = fmtDate(DateTime.fromISO(dateISO, { zone: timezone }));
   }
 
   const badges = card.querySelector(".badge-row");

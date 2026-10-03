@@ -14,6 +14,7 @@
    separately and merged onto the grid rather than assumed to line up. */
 import { DateTime } from "luxon";
 import { supabase } from "./supabase.js";
+import { fmtDate, MONTH_YEAR } from "./i18n.js";
 
 let cursor = null;      // first day of the month on screen
 let onPick = null;
@@ -67,7 +68,7 @@ function draw(marks) {
   const title = dialog.querySelector(".dialog-title");
   if (!grid) return;
 
-  title.textContent = cursor.toFormat("LLLL yyyy");
+  title.textContent = fmtDate(cursor, MONTH_YEAR);
 
   const today = DateTime.now().setZone(tz).startOf("day");
   const first = cursor.startOf("month");

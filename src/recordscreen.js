@@ -19,6 +19,7 @@ import { moonShadowPath } from "./moonicon.js";
 import { showScreen } from "./screens.js";
 import { fetchCheckIn } from "./checkin.js";
 import { fetchCompletions, RITUALS } from "./rituals.js";
+import { t, fmtDate, fmtTime } from "./i18n.js";
 
 const PHASE_LABEL = {
   new: "New Moon", waxing_crescent: "Waxing Crescent", first_quarter: "First Quarter",
@@ -34,11 +35,9 @@ const q = (sel) => screen.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-const labelOf = (value) => {
-  const el = document.querySelector(`#screen-checkin [data-value="${value}"]`);
-  if (!el) return value;
-  return (el.querySelector("span:last-child") || el).textContent.trim();
-};
+/* From the catalogue, not the chips' DOM text: this follows the language
+   and does not go stale when it changes. */
+const labelOf = (value) => t(`vocab.${value}`);
 
 function renderMoon(row) {
   const tz = row.display_tz || ctx.timezone();
@@ -58,7 +57,7 @@ function renderMoon(row) {
 
   // "That day's moon" is too vague once you know the two screens differ.
   const caption = q(".moon-titles .micro-label");
-  if (caption) caption.textContent = `The sky at ${at.toFormat("h:mm a").toLowerCase()}`;
+  if (caption) caption.textContent = t("record.skyAt", { time: fmtTime(at) });
 
   const sign = mode === "sidereal" ? row.moon_natal_sign_sidereal : row.moon_natal_sign_tropical;
   const house = mode === "sidereal" ? row.moon_natal_house_sidereal : row.moon_natal_house_tropical;
@@ -68,35 +67,34 @@ function renderMoon(row) {
   const parts = [];
   if (sign) {
     const i = SIGNS.findIndex((s) => s.toLowerCase() === sign);
-    parts.push(`<p class="datum"><span class="micro-label">Sign</span><span class="value">` +
+    parts.push(`<p class="datum"><span class="micro-label">${t("record.sign")}</span><span class="value">` +
       `<span class="glyph">${SIGN_GLYPHS[i]}</span> ${esc(SIGNS[i])} · ${modeName}</span></p>`);
   }
   // Null house is a real state — no birth time — not a gap to paper over.
   if (house != null) {
-    parts.push(`<p class="datum"><span class="micro-label">House</span>` +
+    parts.push(`<p class="datum"><span class="micro-label">${t("record.house")}</span>` +
       `<span class="value">${ORDINALS[house]} house</span></p>`);
   }
-  parts.push(`<p class="datum datum-wide"><span class="micro-label">Transit</span>` +
+  parts.push(`<p class="datum datum-wide"><span class="micro-label">${t("record.transit")}</span>` +
     `<span class="value conj">${conj.length
       ? conj.map((c) => `Moon <span class="glyph">☌︎</span> ${esc(POINT_LABELS[c.point] || c.point)} ` +
           `<span class="orb">(orb ${Number(c.orb).toFixed(1)}°)</span>`).join("<br>")
-      : "No natal conjunctions"}</span></p>`);
+      : t("record.noConjunctions")}</span></p>`);
 
   q(".data-grid").innerHTML = parts.join("");
 
   if (row.moon_context_pending) {
     q(".data-grid").insertAdjacentHTML("beforeend",
-      `<p class="datum datum-wide hint">The sky for this check-in hasn't been worked out yet — ` +
-      `it will fill in next time the app opens with a connection.</p>`);
+      `<p class="datum datum-wide hint">${esc(t("record.pending"))}</p>`);
   }
 }
 
 function renderAnswers(row, rituals) {
   const tz = row.display_tz || ctx.timezone();
   const date = DateTime.fromISO(row.checkin_date, { zone: tz });
-  q(".display-title").textContent = `Your check-in — ${date.toFormat("cccc, LLLL d")}`;
+  q(".display-title").textContent = t("record.title", { date: fmtDate(date) });
   const head = q(".record-date");
-  if (head) head.textContent = date.toFormat("cccc, LLLL d");
+  if (head) head.textContent = fmtDate(date);
 
   const picked = [...(row.emotions || []), ...(row.body || [])];
   const badges = q(".badge-row");
@@ -122,12 +120,12 @@ function renderAnswers(row, rituals) {
   const marks = [...rituals];
   if (!marks.length) { panel.hidden = true; return; }
   panel.hidden = false;
-  panel.querySelector(".micro-label").textContent = "Rituals";
+  panel.querySelector(".micro-label").textContent = t("record.rituals");
   for (const el of panel.querySelectorAll(".ritual-h")) el.remove();
   const anchor = panel.querySelector(".link-btn");
   for (const key of marks) {
     anchor.insertAdjacentHTML("beforebegin",
-      `<p class="ritual-h">${esc(RITUALS[key] || key)} <span class="mark is-done">Done</span></p>`);
+      `<p class="ritual-h">${esc(RITUALS[key] || key)} <span class="mark is-done">${t("record.done")}</span></p>`);
   }
 }
 
