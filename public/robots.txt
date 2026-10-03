@@ -1,0 +1,6 @@
+# Lunar Tracker is for a handful of friends, not for search.
+# The deploy runbook's access control is noindex-only; on GitHub Pages
+# there are no response headers, so this file and the <meta name="robots">
+# tag in index.html are the entire mechanism. Keep both.
+User-agent: *
+Disallow: /

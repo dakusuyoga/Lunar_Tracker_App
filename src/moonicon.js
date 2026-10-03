@@ -1,30 +1,42 @@
-/* ── Moon phase icon ─────────────────────────────────────────────────
-   Clean geometric SVG rendered from the phase angle (0 = new,
-   180 = full). The terminator is an ellipse arc whose semi-minor axis
-   follows cos(phase); waxing lights the right limb. */
+/* ── Moon phase shadow ───────────────────────────────────────────────
+   The moon is drawn as a photograph with a shadow laid over it: the photo
+   is the lit surface, and this path is the part the Sun isn't reaching.
+   That is the only way a photographic moon can show a phase — the image
+   can't change shape, so the shadow does the work.
+
+   Geometry (design's coordinate system, viewBox -70 -70 140 140):
+     R    = 60      the moon's radius
+     OUT  = R * 1.2 the outer arc, deliberately oversized: the shadow is
+                    gaussian-blurred, and a soft edge sitting exactly on
+                    the limb would leave a lit rind around the dark side.
+                    The whole path is clipped back to r=59.4 by the SVG.
+
+   The terminator is an ellipse arc whose semi-minor axis follows
+   cos(phase); waxing lights the right limb. This is the same construction
+   the previous lit-crescent icon used, with the limb arc taken along the
+   *dark* side instead — same terminator, opposite half. */
 const DEG = Math.PI / 180;
 const norm360 = (x) => ((x % 360) + 360) % 360;
 
-export function moonIcon(phaseAngle, size) {
-  const c = size / 2;
-  const r = c - size * 0.06;
+const R = 60;
+const OUT = R * 1.2;
+
+/* Returns the `d` for the shadow, or "" at full moon when there is none.
+   phaseAngle: 0 = new, 180 = full. */
+export function moonShadowPath(phaseAngle) {
   const frac = (1 - Math.cos(phaseAngle * DEG)) / 2;
-  let lit = "";
-  if (frac > 0.995) {
-    lit = `<circle cx="${c}" cy="${c}" r="${r}" class="moon-lit"/>`;
-  } else if (frac > 0.005) {
-    const waxing = norm360(phaseAngle) <= 180;
-    const rx = Math.abs(r * Math.cos(phaseAngle * DEG));
-    const limbSweep = waxing ? 1 : 0;
-    const termSweep = (frac < 0.5) === waxing ? 0 : 1;
-    lit = `<path class="moon-lit" d="M ${c} ${c - r}
-      A ${r} ${r} 0 0 ${limbSweep} ${c} ${c + r}
-      A ${rx.toFixed(3)} ${r} 0 0 ${termSweep} ${c} ${c - r} Z"/>`;
+
+  if (frac > 0.995) return "";                       // full: nothing in shadow
+  if (frac < 0.005) {                                // new: entirely in shadow
+    return `M 0 ${-OUT} A ${OUT} ${OUT} 0 1 1 0 ${OUT} A ${OUT} ${OUT} 0 1 1 0 ${-OUT} Z`;
   }
-  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"
-    role="img" aria-label="Moon phase">
-    <circle cx="${c}" cy="${c}" r="${r}" class="moon-dark"/>
-    ${lit}
-    <circle cx="${c}" cy="${c}" r="${r}" class="moon-edge" fill="none"/>
-  </svg>`;
+
+  const waxing = norm360(phaseAngle) <= 180;
+  const rx = Math.abs(R * Math.cos(phaseAngle * DEG));
+  // Waxing lights the right limb, so the shadow takes the left one.
+  const limbSweep = waxing ? 0 : 1;
+  const termSweep = (frac < 0.5) === waxing ? 0 : 1;
+
+  return `M 0 ${-OUT} A ${OUT} ${OUT} 0 0 ${limbSweep} 0 ${OUT}`
+    + ` L 0 ${R} A ${rx.toFixed(2)} ${R} 0 0 ${termSweep} 0 ${-R} Z`;
 }

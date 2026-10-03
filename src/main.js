@@ -7,9 +7,34 @@ import {
   natalFor, computeDay,
 } from "./compute.js";
 import { CONTENT } from "./content.js";
-import { moonIcon } from "./moonicon.js";
+import { moonShadowPath } from "./moonicon.js";
 import { loadState, saveState, storageAvailable } from "./store.js";
 import { attachPlaceSearch, timezoneFor } from "./geocode.js";
+import { supabase, currentSession } from "./supabase.js";
+import { initAuth, signOut } from "./auth.js";
+import { showScreen } from "./screens.js";
+import {
+  fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
+} from "./profile.js";
+import { initCheckIn, syncTodayState } from "./checkinui.js";
+import { startOutbox, pendingFor } from "./outbox.js";
+import { fetchCheckIn, backfillPending } from "./checkin.js";
+import { renderRecordCard } from "./recordcard.js";
+import { initRecordScreen } from "./recordscreen.js";
+import { toggleMarkup, fetchCompletions, setCompletion, eventDateOf } from "./rituals.js";
+import { initHistory, openHistory } from "./history.js";
+import { exportMyData, deleteAccount } from "./account.js";
+
+/* Which ceremonies are already marked for the lunation currently on
+   screen. Loaded per lunation, not per day — a ritual window spans two
+   calendar days, so the day is the wrong grain. */
+let ritualsDone = new Set();
+let ritualsLoadedFor = null;
+
+const activeNatal = () => {
+  const p = state.profiles.find((x) => x.id === state.activeProfileId);
+  return p ? natalFor(p) : null;
+};
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g,
@@ -40,37 +65,63 @@ function persist() {
 
 /* ── Content rendering (verbatim text, light structure) ─────────── */
 
+/* A reading, in the design's shape:
+
+     <div class="reading">
+       <p class="reading-h">Daily Moon in Taurus</p>   ← first line
+       <p>…body…</p>
+       <p class="ritual-do"><span class="micro-label">Good for…</span>value</p>
+
+   The stored text keeps a label and its value on consecutive lines, marked
+   with ◗. The design pairs them into one block with a gold micro-label and
+   drops the glyph — the label's styling is what the ◗ stood in for. */
 function contentOr(text) {
   if (!text || !String(text).trim()) {
-    return `<p class="reading pending">— content pending —</p>`;
+    return `<div class="reading"><p class="pending">— content pending —</p></div>`;
   }
-  const lines = String(text).split("\n");
-  const hasMarks = lines.some((l) => l.trim().startsWith("◗"));
+  const lines = String(text).split("\n").map((l) => l.trim()).filter(Boolean);
   const out = [];
-  lines.forEach((raw, i) => {
-    const line = raw.trim();
-    if (!line) return;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (line.startsWith("◗")) {
-      out.push(`<h4 class="reading-h"><span class="mark">◗ </span>${esc(line.slice(1).trim())}</h4>`);
-    } else if (i === 0 && hasMarks) {
-      out.push(`<p class="reading-title">${esc(line)}</p>`);
+      /* The content is authored two ways: the label alone on its line with
+         the value beneath, or both on one line ("◗ Good for… Socializing…").
+         Split on the label's own terminator first, so the second form doesn't
+         set a whole sentence in the gold uppercase label style. */
+      const body = line.slice(1).trim();
+      const split = /^([^…:]{0,24}(?:…|\.\.\.|:))\s*(.*)$/s.exec(body);
+      let label = esc(split ? split[1].trim() : body);
+      let value = split ? esc(split[2].trim()) : "";
+      // Otherwise the value is the next line, when it isn't itself a label.
+      const next = lines[i + 1];
+      if (!value && next && !next.startsWith("◗")) { i++; value = esc(next); }
+      out.push(`<p class="ritual-do"><span class="micro-label">${label}</span>${value}</p>`);
+    } else if (out.length === 0) {
+      out.push(`<p class="reading-h">${esc(line)}</p>`);
     } else {
-      out.push(`<p class="reading">${esc(line)}</p>`);
+      out.push(`<p>${esc(line)}</p>`);
     }
-  });
-  return out.join("");
+  }
+  return `<div class="reading">${out.join("")}</div>`;
 }
 
 /* Rituals: same verbatim treatment as the readings, plus numbered steps
    rendered with a hanging number and optional per-part sub-headings. */
-function ritualContent(ritual) {
+/* `marks` maps a part heading to its ritual key, so the Full Moon panel's
+   two ceremonies each get their own toggle beside their own sub-heading.
+   The New Moon panel has one ceremony and takes `lead` instead. */
+function ritualContent(ritual, marks = {}, lead = null, done = new Set()) {
   if (!ritual || !Array.isArray(ritual.parts)) {
-    return `<p class="reading pending">— content pending —</p>`;
+    return `<div class="reading"><p class="pending">— content pending —</p></div>`;
   }
   const out = [];
+  if (lead) out.push(toggleMarkup(lead, done.has(lead)));
   for (const part of ritual.parts) {
     if (part.heading) {
       out.push(`<h4 class="ritual-h">${esc(part.heading)}</h4>`);
+      const key = marks[part.heading];
+      if (key) out.push(toggleMarkup(key, done.has(key)));
     }
     for (const raw of String(part.text || "").split("\n")) {
       const line = raw.trim();
@@ -81,11 +132,14 @@ function ritualContent(ritual) {
       } else if (step) {
         out.push(`<p class="ritual-step"><span class="num">${esc(step[1])}.</span> <span>${esc(step[2])}</span></p>`);
       } else {
-        out.push(`<p class="reading">${esc(line)}</p>`);
+        out.push(`<p>${esc(line)}</p>`);
       }
     }
   }
-  return out.join("");
+  /* Wrapped in .reading like every other panel body: the design styles
+     `.reading p`, so a bare `p.reading` picks up no typography at all and
+     ritual prose rendered in the browser default. */
+  return `<div class="reading">${out.join("")}</div>`;
 }
 
 /* `kind` is a stable identity for the panel (e.g. "sign", "house") so an
@@ -93,7 +147,9 @@ function ritualContent(ritual) {
    refresh on today, and the moment a reading is replaced at an ingress. */
 function section(title, body, kind) {
   const k = kind ? ` data-kind="${kind}"` : "";
-  return `<details class="entry"${k}><summary><h3>${title}</h3><span class="disclose" aria-hidden="true">＋</span></summary><div class="entry-body">${body}</div></details>`;
+  return `<details class="entry"${k}><summary><h3 class="reading-title">${title}</h3>` +
+    `<span class="disclose" aria-hidden="true">＋</span></summary>` +
+    `<div class="entry-body">${body}</div></details>`;
 }
 
 const fmtDay = (date) =>
@@ -151,54 +207,81 @@ function nextEventsLine(day) {
      today, change still ahead → "♉ Moon in Taurus · 27°10′ · tropical → Gemini from 4:12 pm"
      today, change already past → "♊ Moon in Gemini · 0°15′ · tropical · since 4:12 pm"
      past / future             → "♉ Taurus until 4:12 pm · ♊ Gemini after · tropical" */
+/* Zodiac glyphs need the design's .glyph wrapper: it forces text (not
+   colour-emoji) presentation and gives them the display face. Bare, they
+   get picked up by the system emoji font and render as coloured tiles. */
+const glyph = (i) => `<span class="glyph">${SIGN_GLYPHS[i]}</span>`;
+
+/* The zodiac is named as a proper noun in the interface. The stored value
+   stays lowercase — it's a state key and a localStorage value, and
+   capitalising it would orphan every saved preference. Display only. */
+const modeLabel = () => (state.zodiacMode === "sidereal" ? "Sidereal" : "Tropical");
+
 function signLine(day) {
   const idx = day.moonSignIndex;
-  const plain = `${SIGN_GLYPHS[idx]} Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${state.zodiacMode}`;
+  const plain = `Moon in ${SIGNS[idx]} · ${degInSign(day.moonLon)} · ${modeLabel()}`;
   const segs = day.signSegments;
-  if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
+  if (state.showTransitions === false || !segs || segs.length < 2) {
+    return `${glyph(idx)} ${esc(plain)}`;
+  }
 
   if (!day.isToday) {
     const span = segs.map((s, i) =>
       i === segs.length - 1
-        ? `${SIGN_GLYPHS[s.value]} ${SIGNS[s.value]} after`
-        : `${SIGN_GLYPHS[s.value]} ${SIGNS[s.value]} until ${fmtTime(s.to)}`
+        ? `${glyph(s.value)} ${esc(`${SIGNS[s.value]} after`)}`
+        : `${glyph(s.value)} ${esc(`${SIGNS[s.value]} until ${fmtTime(s.to)}`)}`
     ).join(" · ");
-    return `${esc(span)} · ${esc(state.zodiacMode)}`;
+    return `${span} · ${esc(modeLabel())}`;
   }
 
   const active = activeSegment(segs, day.anchor);
   const i = segs.indexOf(active);
   const next = segs[i + 1];
   const note = next
-    ? `→ ${SIGN_GLYPHS[next.value]} ${SIGNS[next.value]} from ${fmtTime(next.from)}`
-    : `since ${fmtTime(active.from)}`;
-  return `${esc(plain)} <span class="ingress">${esc(note)}</span>`;
+    ? `<span class="ingress">→ ${glyph(next.value)} ${esc(`${SIGNS[next.value]} from ${fmtTime(next.from)}`)}</span>`
+    : `<span class="ingress">${esc(`since ${fmtTime(active.from)}`)}</span>`;
+  return `${glyph(idx)} ${esc(plain)} ${note}`;
 }
 
 /* The same treatment for the natal-house line under the moon card. Built
    from the segments rather than appended to the anchor's house — on a past
    or future day the anchor sits in one segment while the line has to name
    the house the day *starts* in. */
+/* In Sidereal the houses are whole sign, so a house boundary IS a sign
+   boundary and both lines would quote the same clock time. The house line
+   drops its times in that case — the sign line above already carries them,
+   and the house number is the only thing this line adds. */
+function housesFollowSigns(day) {
+  const h = day.houseSegments, s = day.signSegments;
+  if (!h || !s || h.length !== s.length) return false;
+  return h.every((seg, i) => Math.abs(seg.from - s[i].from) < 1000);
+}
+
 function houseLine(day) {
   const segs = day.houseSegments;
   const plain = `Moon transiting the ${ORDINALS[day.house]} house`;
   if (state.showTransitions === false || !segs || segs.length < 2) return esc(plain);
 
+  const echoes = housesFollowSigns(day);
+
   if (!day.isToday) {
     const span = segs.map((s, i) =>
       i === segs.length - 1
-        ? `${ORDINALS[s.value]} after`
-        : `${ORDINALS[s.value]} until ${fmtTime(s.to)}`
-    ).join(" · ");
+        ? `${ORDINALS[s.value]}${echoes ? "" : " after"}`
+        : `${ORDINALS[s.value]}${echoes ? "" : ` until ${fmtTime(s.to)}`}`
+    ).join(echoes ? ", then the " : " · ");
     return esc(`Moon transiting the ${span}`);
   }
 
   const active = activeSegment(segs, day.anchor);
   const next = segs[segs.indexOf(active) + 1];
+  const head = esc(`Moon transiting the ${ORDINALS[active.value]} house`);
+  // Nothing left to say once the time is dropped and the change has passed.
+  if (echoes && !next) return head;
   const note = next
-    ? `→ ${ORDINALS[next.value]} from ${fmtTime(next.from)}`
+    ? `→ ${ORDINALS[next.value]}${echoes ? "" : ` from ${fmtTime(next.from)}`}`
     : `since ${fmtTime(active.from)}`;
-  return `${esc(`Moon transiting the ${ORDINALS[active.value]} house`)} <span class="ingress">${esc(note)}</span>`;
+  return `${head} <span class="ingress">${esc(note)}</span>`;
 }
 
 /* The active segment is the one containing the anchor; on past/future dates
@@ -254,7 +337,13 @@ function render() {
   $("date-input").value = selectedDate;
 
   // Astronomical card
-  $("moon-icon").innerHTML = moonIcon(day.phaseAngle, 96);
+  /* Update only the shadow's geometry. The photo and glow are siblings in
+     the markup — replacing #moon-icon wholesale would re-create the <img>
+     on every minute-tick and flicker. */
+  const shadow = $("moon-shadow");
+  const d = moonShadowPath(day.phaseAngle);
+  shadow.setAttribute("d", d || "M 0 0");
+  shadow.style.display = d ? "" : "none";
   let phaseLabel = esc(day.phase);
   if (day.eclipse) {
     const label = day.eclipse.kind === "solar" ? "Solar Eclipse" : "Lunar Eclipse";
@@ -281,12 +370,14 @@ function render() {
   } else if (natal.invalid) {
     transit = `<p class="transit-note">This profile's birth data could not be interpreted (${esc(natal.reason)}). Edit the profile to fix it.</p>`;
   } else {
+    // The design heads this panel with its own micro-label, like the others.
+    transit = `<p class="micro-label">Transit</p>`;
     if (day.house != null) {
       transit += `<p class="transit-house">${houseLine(day)}</p>`;
     }
     if (day.conjunctions.length) {
       transit += day.conjunctions.map((c) =>
-        `<p class="conj">Moon ☌ ${esc(c.label)} <span class="orb">(orb ${c.orb.toFixed(1)}°)</span></p>`
+        `<p class="conj">Moon <span class="glyph">☌︎</span> ${esc(c.label)} <span class="orb">(orb ${c.orb.toFixed(1)}°)</span></p>`
       ).join("");
     } else {
       transit += `<p class="conj none">No natal conjunctions today</p>`;
@@ -306,7 +397,10 @@ function render() {
   if (state.showAffirmations !== false && day.affirmations) {
     const list = (CONTENT.newMoonAffirmations || {})[day.affirmations.house] || [];
     const texts = list.filter((t) => t && String(t).trim());
-    affHTML = texts.map((t) => `<p class="affirmation">‘${esc(t)}’</p>`).join("");
+    // Label, then quotes divided by hairlines — the design's shape.
+    affHTML = `<p class="micro-label">New moon affirmations</p>` +
+      texts.map((t) => `<p class="affirmation">‘${esc(t)}’</p>`)
+        .join(`<hr class="rule">`);
   }
   $("affirmations").innerHTML = affHTML;
 
@@ -375,7 +469,8 @@ function render() {
   if (day.wishingWindow) {
     const timing = `<p class="ritual-timing">New Moon exact at ${esc(fmtTime(day.wishingWindow.instant))} — wishes count from then.</p>`;
     parts.push(section(esc((CONTENT.newMoonRitual || {}).title || "New Moon Ritual"),
-      timing + ritualContent(CONTENT.newMoonRitual), "newmoon-ritual"));
+      timing + ritualContent(CONTENT.newMoonRitual, {}, "new_moon_wishing", ritualsDone),
+      "newmoon-ritual"));
   } else if (day.wishingOpensAt) {
     // Don't let the ritual just be missing on the day of the New Moon.
     parts.push(`<p class="ritual-timing standalone">The New Moon is exact at ${esc(fmtTime(day.wishingOpensAt))} — the wishing window opens then.</p>`);
@@ -395,7 +490,11 @@ function render() {
     if (day.isToday) {
       const timing = `<p class="ritual-timing">Full Moon exact at ${esc(fmtTime(w.instant))}.</p>`;
       parts.push(section(esc((CONTENT.fullMoonRitual || {}).title || "Full Moon Ritual"),
-        timing + ritualContent(CONTENT.fullMoonRitual), "fullmoon-ritual"));
+        timing + ritualContent(CONTENT.fullMoonRitual, {
+          "Full Moon Forgiveness Ceremony": "full_moon_forgiveness",
+          "Entering a State of Gratitude": "full_moon_gratitude",
+        }, null, ritualsDone),
+        "fullmoon-ritual"));
     }
   }
   if (day.firstQuarter) {
@@ -417,16 +516,277 @@ function render() {
     if (wasOpen.has(d.dataset.kind)) d.open = true;
   }
 
+  /* The saved check-in for whichever date is being viewed. Fetched
+     asynchronously so the daily view never waits on the network to draw;
+     the card simply appears when the answer arrives. The outbox copy wins,
+     because it exists before the row has reached Postgres. */
+  /* The toggle hides the card, never the data: the check-in itself is
+     untouched and still reachable from History. */
+  if (account && state.showRecordCard !== false) {
+    const forDate = selectedDate;
+    const queued = pendingFor(forDate);
+    if (queued) {
+      renderRecordCard(queued.row, forDate, state.location.timezone);
+    } else {
+      renderRecordCard(null, forDate, state.location.timezone);
+      fetchCheckIn(account.id, forDate).then((row) => {
+        // Ignore a late reply for a date the user has already left, or a
+        // card the user switched off while the request was in flight.
+        if (row && selectedDate === forDate && state.showRecordCard !== false) {
+          renderRecordCard(row, forDate, state.location.timezone);
+        }
+      });
+    }
+  } else {
+    // Switched off, or signed out: take down any card already drawn.
+    renderRecordCard(null, selectedDate, state.location.timezone);
+  }
+
+  /* Ritual toggles reflect the lunation on screen. Fetched once per
+     lunation and re-rendered when the answer lands, so the panels draw
+     immediately rather than waiting on the network. */
+  const lunation = day.wishingWindow?.instant || (day.isToday && day.fullMoonWindow?.instant);
+  if (account && lunation) {
+    const key = eventDateOf(lunation);
+    if (ritualsLoadedFor !== key) {
+      ritualsLoadedFor = key;
+      fetchCompletions(account.id, key).then((set) => {
+        ritualsDone = set;
+        if (ritualsLoadedFor === key) render();
+      });
+    }
+  } else {
+    ritualsLoadedFor = null;
+    ritualsDone = new Set();
+  }
+
   // Header state
   renderProfileSelect();
-  $("mode-tropical").classList.toggle("active", state.zodiacMode === "tropical");
-  $("mode-sidereal").classList.toggle("active", state.zodiacMode === "sidereal");
+  /* `is-active` is the design's segmented-control state class — it also
+     drives aria-selected, so set both rather than only the styling. */
+  for (const [id, mode] of [["mode-tropical", "tropical"], ["mode-sidereal", "sidereal"]]) {
+    const on = state.zodiacMode === mode;
+    $(id).classList.toggle("is-active", on);
+    $(id).setAttribute("aria-selected", String(on));
+  }
 }
 
 /* Today's view is read at the current moment, so it goes stale on its own:
    the Moon moves ~0.55°/hour and can change sign or house mid-session.
    Re-render each minute, and again whenever the tab is brought back — a
    screen left open overnight would otherwise still be showing yesterday. */
+/* The design ships a proper boot-failure state; use it rather than
+   replacing the loading screen with bare paragraphs. The technical detail
+   stays visible on purpose — it is what gets read out over a message when
+   someone's app won't start. */
+function showBootError(e) {
+  const box = document.querySelector(".boot-error");
+  if (!box) return;
+  document.querySelector(".boot-bar")?.setAttribute("hidden", "");
+  document.querySelector(".boot-title")?.setAttribute("hidden", "");
+  document.querySelector(".boot-note")?.setAttribute("hidden", "");
+  const trace = box.querySelector(".boot-trace");
+  if (trace) {
+    trace.textContent =
+      `${(e && e.name) || "Error"}: ${(e && e.message) || e}\n` +
+      "If reloading doesn't help: on iPhone, Lockdown Mode blocks this app — " +
+      "tap “aA” in the address bar → Website Settings → allow this site.";
+  }
+  box.hidden = false;
+  box.querySelector('[data-action="retry-boot"]')
+    ?.addEventListener("click", () => window.location.reload());
+}
+
+/* Shown when we can't tell whether the account has a chart. Deliberately
+   NOT the first-run screen: inviting someone to re-enter birth details
+   they already have is how a chart gets silently replaced. */
+function showProfileUnreachable() {
+  const card = document.querySelector("#screen-first-run .card-setup");
+  showScreen("screen-first-run");
+  if (!card) return;
+  const title = card.querySelector(".display-title");
+  const lede = card.querySelector(".lede");
+  const cta = card.querySelector(".cta");
+  const btn = $("cta-first-run");
+  if (title) title.textContent = "Couldn't load your chart.";
+  if (lede) {
+    lede.textContent =
+      "We reached your account but not your chart, so we don't know whether " +
+      "you've set one up. Nothing has been changed.";
+  }
+  if (cta) cta.hidden = true;
+  if (btn) {
+    btn.textContent = "Try again";
+    btn.onclick = () => window.location.reload();
+  }
+}
+
+/* The signed-in account, or null. Kept module-level because the check-in
+   and ritual writes all need the user id. */
+let account = null;
+let profileRow = null;
+
+/* applySession runs on boot AND on every auth event Supabase emits —
+   INITIAL_SESSION, SIGNED_IN, each TOKEN_REFRESHED. Anything inside it that
+   attaches a listener would attach another copy each time, so the calendar's
+   month arrows stepped once per past session event: three listeners meant
+   October jumped to July. These wire the DOM once. */
+let listenersWired = false;
+
+/* Which screen a session implies: no session → login; session but no chart
+   yet → first run; otherwise the daily view. */
+async function applySession(session) {
+  account = session ? session.user : null;
+
+  if (!account) {
+    profileRow = null;
+    state.profiles = [];
+    state.activeProfileId = null;
+    showScreen("screen-login");
+    return;
+  }
+
+  const mail = document.querySelector(".menu-mail");
+  const name = document.querySelector(".menu-name");
+  if (mail) mail.textContent = account.email || "";
+
+  /* "No chart yet" and "couldn't find out" are different answers, and
+     conflating them is dangerous: an existing user dropped into first run
+     would enter their birth details again, overwriting a chart that was
+     only ever unreachable. So a failed read says so and offers a retry. */
+  try {
+    profileRow = await fetchProfileRow(account.id);
+  } catch (e) {
+    console.error("profile read failed", e);
+    showProfileUnreachable();
+    return;
+  }
+
+  if (!profileRow) {
+    state.profiles = [];
+    state.activeProfileId = null;
+    showScreen("screen-first-run");
+    return;
+  }
+
+  // One row, mapped into the array shape the rest of the app expects.
+  const profile = rowToProfile(profileRow);
+  state.profiles = [profile];
+  state.activeProfileId = profile.id;
+  state.location = rowToLocation(profileRow);
+  if (name) name.textContent = profile.name;
+  document.querySelector(".menu-head").hidden = false;
+
+  showScreen("screen-daily");
+  render();
+
+  // Anything the outbox is still holding goes now that we have a session.
+  startOutbox(supabase);
+  await syncTodayState();
+
+  if (!listenersWired) {
+    listenersWired = true;
+    /* Neither is frozen to this session: the record screen takes getters,
+       and openHistory re-sends the account and timezone on every open. */
+    initHistory({
+      userId: account.id,
+      timezone: state.location.timezone,
+      onPick: (dateISO) => setDate(dateISO),
+    });
+
+    initRecordScreen({
+      userId: () => account.id,
+      timezone: () => state.location.timezone,
+      selectedDate: () => selectedDate,
+    });
+  }
+
+  /* Any check-in saved while the engine was cold gets its moon-context
+     now. Runs once per session, in the background: it changes nothing the
+     user is looking at, and a failure simply leaves the rows pending for
+     next time. */
+  backfillPending(account.id, activeNatal(), profileRow)
+    .then(({ filled }) => { if (filled) console.info(`backfilled ${filled} check-in(s)`); })
+    .catch((e) => console.warn("backfill skipped", e));
+}
+
+/* ── V2-D: Your data ─────────────────────────────────────────────────
+   Export is a plain download. Deletion is deliberately awkward: the
+   button only reveals a confirmation, and that confirmation requires
+   typing a word rather than clicking again — because the one thing a
+   second button cannot distinguish is a deliberate choice from a
+   mis-click on the first one, and this action has no undo. */
+function wireDataDialog() {
+  const dlg = $("dialog-data");
+  if (!dlg) return;
+
+  const note = dlg.querySelector(".data-note");
+  const errorEl = dlg.querySelector(".data-error");
+  const confirmBox = dlg.querySelector(".danger-confirm");
+  const startRow = dlg.querySelector(".danger-start");
+  const input = $("delete-confirm");
+  const goBtn = dlg.querySelector('[data-action="delete-confirm"]');
+
+  const reset = () => {
+    confirmBox.hidden = true;
+    startRow.hidden = false;
+    input.value = "";
+    goBtn.disabled = true;
+    errorEl.hidden = true;
+    note.hidden = true;
+  };
+  dlg.addEventListener("close", reset);
+
+  dlg.querySelector('[data-action="export-data"]').addEventListener("click", async (e) => {
+    if (!account) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = "Collecting…";
+    try {
+      const { checkIns, rituals } = await exportMyData(account.id);
+      note.textContent = `Downloaded — ${checkIns} check-in${checkIns === 1 ? "" : "s"}` +
+        ` and ${rituals} ritual mark${rituals === 1 ? "" : "s"}.`;
+      note.hidden = false;
+    } catch (err) {
+      console.warn("export failed", err);
+      note.textContent = "Couldn't build the export just now. Check your connection and try again.";
+      note.hidden = false;
+    }
+    btn.disabled = false;
+    btn.textContent = was;
+  });
+
+  dlg.querySelector('[data-action="delete-start"]').addEventListener("click", () => {
+    startRow.hidden = true;
+    confirmBox.hidden = false;
+    input.focus();
+  });
+  dlg.querySelector('[data-action="delete-cancel"]').addEventListener("click", reset);
+
+  input.addEventListener("input", () => {
+    goBtn.disabled = input.value.trim().toUpperCase() !== "DELETE";
+  });
+
+  goBtn.addEventListener("click", async () => {
+    goBtn.disabled = true;
+    goBtn.textContent = "Deleting…";
+    errorEl.hidden = true;
+    try {
+      await deleteAccount();
+      /* Everything local is already cleared; a reload is the honest way
+         back to a signed-out app with no stale state in memory. */
+      window.location.reload();
+    } catch (err) {
+      console.error("account deletion failed", err);
+      errorEl.textContent = "Couldn't delete the account. Nothing was removed — try again, or get in touch.";
+      errorEl.hidden = false;
+      goBtn.disabled = false;
+      goBtn.textContent = "Delete everything";
+    }
+  });
+}
+
 function startLiveClock() {
   let lastToday = todayISO();
   const tick = () => {
@@ -449,6 +809,14 @@ function startLiveClock() {
 }
 
 function renderProfileSelect() {
+  /* The design's account button carries a name. Until V2 there are no
+     accounts, so it shows the active chart's name — and nothing at all
+     rather than a placeholder when there isn't one. The button still opens
+     the menu either way; Location, Display and About don't need a profile. */
+  const active = state.profiles.find((p) => p.id === state.activeProfileId);
+  const label = document.querySelector(".account-name");
+  if (label) label.textContent = active ? active.name : "";
+
   const sel = $("profile-select");
   sel.innerHTML = "";
   if (!state.profiles.length) {
@@ -485,53 +853,52 @@ let editingProfileId = null;   // null = creating
 let pfPickedPlace = null;      // {displayName, latitude, longitude} from search
 let pfTzAuto = true;
 
+/* The chart at rest. The design shows the stored values as a read-only
+   card — name, date, time, then a rule, then place with its timezone
+   beneath — and keeps the form behind an Edit button. That is gentler than
+   opening a form full of inputs every time someone wants to check what
+   their birth time is set to. */
 function renderProfileList() {
-  const ul = $("profile-list");
-  ul.innerHTML = "";
-  if (!state.profiles.length) {
-    ul.innerHTML = `<li class="empty">No profiles yet — create one below.</li>`;
-    return;
-  }
-  for (const p of state.profiles) {
-    const li = document.createElement("li");
-    const info = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "p-name" + (p.id === state.activeProfileId ? " active" : "");
-    name.textContent = p.name;
-    const meta = document.createElement("div");
-    meta.className = "p-meta";
-    meta.textContent = `${p.birthDate}${p.timeUnknown ? " · time unknown" : ` · ${p.birthTime}`} · ${p.place.displayName.split(",")[0]}`;
-    info.append(name, meta);
-    const actions = document.createElement("div");
-    actions.className = "p-actions";
-    const use = document.createElement("button");
-    use.type = "button"; use.textContent = "Use";
-    use.addEventListener("click", () => {
-      state.activeProfileId = p.id;
-      persist(); renderProfileList(); render();
-    });
-    const edit = document.createElement("button");
-    edit.type = "button"; edit.textContent = "Edit";
-    edit.addEventListener("click", () => openProfileForm(p));
-    const del = document.createElement("button");
-    del.type = "button"; del.textContent = "Delete";
-    del.addEventListener("click", () => {
-      if (!window.confirm(`Delete profile “${p.name}”? This cannot be undone.`)) return;
-      state.profiles = state.profiles.filter((x) => x.id !== p.id);
-      if (state.activeProfileId === p.id) {
-        state.activeProfileId = state.profiles.length ? state.profiles[0].id : null;
-      }
-      persist(); renderProfileList(); render();
-    });
-    actions.append(use, edit, del);
-    li.append(info, actions);
-    ul.appendChild(li);
-  }
+  const box = $("profile-list");
+  const p = state.profiles[0];
+  if (!p) { box.innerHTML = ""; return; }
+
+  const date = DateTime.fromISO(p.birthDate).toFormat("d LLLL yyyy");
+  const time = p.timeUnknown ? "Not known" : p.birthTime;
+
+  /* "(auto)" is only truthful when the zone really is the one the
+     coordinates imply — so derive it rather than assert it. */
+  const auto = timezoneFor(p.place.latitude, p.place.longitude) === p.timezone;
+
+  box.innerHTML =
+    `<p class="datum"><span class="micro-label">Profile name</span>` +
+      `<span class="value">${esc(p.name)}</span></p>` +
+    `<hr class="rule">` +
+    `<div class="field-row">` +
+      `<p class="datum"><span class="micro-label">Birth date</span>` +
+        `<span class="value">${esc(date)}</span></p>` +
+      `<p class="datum"><span class="micro-label">Birth time</span>` +
+        `<span class="value">${esc(time)}</span></p>` +
+    `</div>` +
+    `<hr class="rule">` +
+    `<p class="datum"><span class="micro-label">Birth place</span>` +
+      `<span class="value">${esc(p.place.displayName)}</span>` +
+      `<span class="helper">${esc(p.timezone)}${auto ? " (auto)" : ""}</span></p>`;
 }
 
+/* Two states in one dialog: the chart at rest, and the form. */
 function showProfileView(formMode) {
   $("profile-list-view").hidden = formMode;
   $("profile-form").hidden = !formMode;
+}
+
+/* "Your chart" opens the card; first run and Edit open the form. */
+function openChartDialog() {
+  const p = state.profiles[0];
+  if (!p) { openProfileForm(null); return; }
+  renderProfileList();
+  showProfileView(false);
+  if (!profileDialog.open) profileDialog.showModal();
 }
 
 function openProfileForm(profile) {
@@ -545,7 +912,21 @@ function openProfileForm(profile) {
   $("pf-time-unknown").checked = profile ? !!profile.timeUnknown : false;
   $("pf-time").disabled = $("pf-time-unknown").checked;
   $("pf-place").value = "";
-  $("pf-place-chosen").textContent = profile ? `Selected: ${profile.place.displayName}` : "";
+  /* A chart built from hand-typed coordinates looks identical to one
+     picked from the map, so say when it isn't. The tell is the label: with
+     no place name to store, the form falls back to the bare lat/lon pair.
+     Half a degree of longitude moves every Placidus cusp. */
+  const chosen = $("pf-place-chosen");
+  if (!profile) {
+    chosen.textContent = "";
+  } else if (/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(profile.place.displayName.trim())) {
+    chosen.innerHTML =
+      `Selected: ${esc(profile.place.displayName)} ` +
+      `<span class="hint">— entered as coordinates, so this location is approximate. ` +
+      `Search for the place name if you can; it moves the house cusps.</span>`;
+  } else {
+    chosen.textContent = `Selected: ${profile.place.displayName}`;
+  }
   $("pf-lat").value = profile ? profile.place.latitude : "";
   $("pf-lon").value = profile ? profile.place.longitude : "";
   $("pf-manual").open = false;
@@ -573,7 +954,7 @@ function validCoords(lat, lon) {
     lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
 }
 
-function pfSubmit(ev) {
+async function pfSubmit(ev) {
   ev.preventDefault();
   const errEl = $("pf-error");
   const fail = (msg) => { errEl.textContent = msg; errEl.hidden = false; };
@@ -610,8 +991,10 @@ function pfSubmit(ev) {
     return fail("Please choose a valid IANA timezone (e.g. Europe/Berlin).");
   }
 
+  if (!account) return fail("You're signed out. Log in again to save your chart.");
+
   const profile = {
-    id: editingProfileId || crypto.randomUUID(),
+    id: account.id,          // one chart per account: the user IS the key
     name,
     birthDate,
     birthTime,
@@ -620,16 +1003,58 @@ function pfSubmit(ev) {
     timezone,
     timezoneAuto: pfTzAuto,
   };
-  if (editingProfileId) {
-    state.profiles = state.profiles.map((p) => (p.id === editingProfileId ? profile : p));
-  } else {
-    state.profiles.push(profile);
+
+  /* Compute the natal chart here and store it as degrees. The database
+     keeps raw longitudes, never signs or houses — degrees convert to
+     either zodiac, whereas a stored word like "scorpio" is already
+     committed to one and can't be flipped. Same rule as natal_snapshot. */
+  let natalData;
+  try {
+    const natal = natalFor(profile);
+    if (natal.invalid) return fail(`That birth data couldn't be interpreted (${natal.reason}).`);
+    natalData = {
+      natal_utc: natal.utcISO,
+      ayanamsa: natal.ayanamsa,
+      time_unknown: natal.timeUnknown,
+      /* Per mode, because they genuinely differ: the house system is a
+         property of how a chart is read, not of the chart itself. Recorded
+         so a later recompute knows which convention produced a stored
+         house, and can tell rows written before this split apart from
+         rows written after. */
+      house_system: { tropical: "placidus", sidereal: "whole_sign" },
+      algo_version: 1,
+      points: natal.points,
+      angles: natal.angles || null,
+      cusps: natal.cusps || null,
+    };
+  } catch (e) {
+    return fail(`Couldn't compute the chart: ${(e && e.message) || e}`);
   }
-  state.activeProfileId = profile.id;
-  persist();
-  renderProfileList();
-  showProfileView(false);
+
+  const submit = $("profile-form").querySelector('button[type="submit"]');
+  submit.disabled = true;
+  try {
+    profileRow = await saveProfileRow(account.id, profile, natalData, profileRow);
+  } catch (e) {
+    submit.disabled = false;
+    return fail(`Couldn't save: ${(e && e.message) || e}`);
+  }
+  submit.disabled = false;
+
+  state.profiles = [rowToProfile(profileRow)];
+  state.activeProfileId = account.id;
+  const nameEl = document.querySelector(".menu-name");
+  if (nameEl) nameEl.textContent = profile.name;
+
+  profileDialog.close();
+  showScreen("screen-daily");
   render();
+
+  /* A new account has a timezone (inferred from the device) but no place,
+     and the place is what moonrise, moonset, sunrise and sunset are
+     computed from. Ask once, right after the chart exists — rather than
+     quietly showing someone in Hanoi the times for Toronto. */
+  if (!profileRow.display_tz) openLocationForm();
 }
 
 /* ── Display-location form ──────────────────────────────────────── */
@@ -652,6 +1077,7 @@ function openLocationForm() {
   $("opt-affirmations").checked = state.showAffirmations !== false;
   $("opt-transitions").checked = state.showTransitions !== false;
   $("opt-both-readings").checked = state.showBothReadings === true;
+  $("opt-record-card").checked = state.showRecordCard !== false;
   settingsDialog.showModal();
 }
 
@@ -688,7 +1114,17 @@ function locSubmit(ev) {
   }
 
   state.location = { displayName, latitude: lat, longitude: lon, timezone };
+
+  /* Display location belongs to the account, not the device: it decides
+     which local day a check-in belongs to, and that day is part of the
+     row's identity. Two devices set differently would disagree about what
+     "today" is. Saved locally too, so the view survives a failed write. */
   persist();
+  if (account) {
+    saveDisplayLocation(account.id, state.location)
+      .catch((e) => console.warn("display location not saved to the account", e));
+  }
+
   settingsDialog.close();
   selectedDate = clampDate(selectedDate);
   render();
@@ -724,19 +1160,101 @@ function wire() {
     persist();
     render();
   });
-  $("manage-profiles").addEventListener("click", () => {
-    renderProfileList();
-    showProfileView(false);
-    profileDialog.showModal();
+  /* The design moved the occasional actions behind an account menu, and
+     split the old single Settings dialog into Location / Display / About.
+     `#manage-profiles` is now the account button that opens that menu. */
+  const accountMenu = $("account-menu");
+  const setMenu = (open) => {
+    accountMenu.hidden = !open;
+    $("manage-profiles").setAttribute("aria-expanded", String(open));
+  };
+  $("manage-profiles").addEventListener("click", (e) => {
+    e.stopPropagation();
+    setMenu(accountMenu.hidden);
   });
-  $("open-settings").addEventListener("click", openLocationForm);
+  document.addEventListener("click", (e) => {
+    if (!accountMenu.hidden && !accountMenu.contains(e.target)) setMenu(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !accountMenu.hidden) setMenu(false);
+  });
+
+  /* Menu items declare their target dialog in markup, so this stays correct
+     if the design moves them again. "Your chart" needs its list rebuilt
+     first; the rest are static or already wired by their own handlers. */
+  for (const item of document.querySelectorAll("[data-dialog]")) {
+    item.addEventListener("click", () => {
+      setMenu(false);
+      const dlg = $(item.dataset.dialog);
+      if (!dlg) return;
+      // One chart per account: "Your chart" opens that chart's card.
+      if (dlg.id === "profile-dialog") { openChartDialog(); return; }
+      if (dlg.id === "settings-dialog") { openLocationForm(); return; }
+      if (dlg.id === "dialog-history" && account) {
+        openHistory({
+          userId: account.id,
+          timezone: state.location.timezone,
+          focusDate: selectedDate,
+        });
+      }
+      if (!dlg.open) dlg.showModal();
+    });
+  }
+  for (const btn of document.querySelectorAll('[data-action="close-dialog"]')) {
+    btn.addEventListener("click", () => btn.closest("dialog")?.close());
+  }
+  /* First run has no chart yet, so it reuses the chart form rather than
+     duplicating one. The form knows how to save to Postgres and will send
+     the user on to the daily view once it does. */
+  $("cta-first-run")?.addEventListener("click", () => openProfileForm(null));
+
+  /* Ritual toggles are injected with the readings, so the listener lives
+     on the container. Optimistic: flip the button immediately, revert if
+     the write fails — the alternative is a control that feels broken on a
+     slow connection. */
+  $("readings").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".ritual-toggle");
+    if (!btn || !account) return;
+    const ritual = btn.dataset.ritual;
+    const day = computeDay(selectedDate, state.location, activeNatal(), state.zodiacMode);
+    const instant = day.wishingWindow?.instant || day.fullMoonWindow?.instant;
+    if (!instant) return;
+
+    const done = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", String(done));
+    btn.classList.toggle("is-done", done);
+    btn.textContent = done ? "Done ✓" : "Mark as done";
+    if (done) ritualsDone.add(ritual); else ritualsDone.delete(ritual);
+
+    try {
+      await setCompletion(account.id, ritual, instant, done, state.location.timezone);
+    } catch (err) {
+      console.error("ritual toggle failed", err);
+      btn.setAttribute("aria-pressed", String(!done));
+      btn.classList.toggle("is-done", !done);
+      btn.textContent = !done ? "Done ✓" : "Mark as done";
+      if (done) ritualsDone.delete(ritual); else ritualsDone.add(ritual);
+    }
+  });
+
+  document.querySelector('[data-action="sign-out"]')
+    ?.addEventListener("click", async () => {
+      setMenu(false);
+      await signOut();   // onAuthStateChange returns us to the login screen
+    });
+
+  wireDataDialog();
+
   $("location-label").addEventListener("click", openLocationForm);
 
   // Profile dialog
-  $("new-profile").addEventListener("click", () => openProfileForm(null));
+  // Repurposed by the design as "Edit": there is one chart, so editing it
+  // is the only thing this button can mean.
+  $("new-profile").addEventListener("click", () => openProfileForm(state.profiles[0] || null));
   $("close-profiles").addEventListener("click", () => profileDialog.close());
   $("pf-cancel").addEventListener("click", () => {
-    if (state.profiles.length) showProfileView(false);
+    // Cancel returns to the card when there is a chart to return to.
+    if (state.profiles.length) { renderProfileList(); showProfileView(false); }
     else profileDialog.close();
   });
   $("profile-form").addEventListener("submit", pfSubmit);
@@ -799,6 +1317,11 @@ function wire() {
     persist();
     render();
   });
+  $("opt-record-card").addEventListener("change", (e) => {
+    state.showRecordCard = e.target.checked;
+    persist();
+    render();
+  });
 
   // Timezone datalist (searchable dropdown of IANA names)
   const dl = $("tz-list");
@@ -825,28 +1348,48 @@ function wire() {
     return;
   }
 
+  /* The engine and the session are independent, and the engine is the slow
+     one (~2.5 MB). Start it immediately and settle the session alongside,
+     so a returning user isn't waiting on a sequence of two round trips. */
+  const enginePromise = initEphemeris();
+  const sessionPromise = currentSession();
+
   try {
-    await initEphemeris();
+    await enginePromise;
   } catch (e) {
     console.error(e);
-    const p1 = document.createElement("p");
-    p1.textContent = "Could not load the ephemeris. Check your connection and reload.";
-    const p2 = document.createElement("p");
-    p2.className = "loading-detail";
-    p2.textContent = `Technical detail: ${(e && e.message) || e}`;
-    const p3 = document.createElement("p");
-    p3.className = "loading-detail";
-    p3.textContent =
-      "If reloading doesn't help: on iPhone, Lockdown Mode blocks this app — " +
-      "tap “aA” in the address bar → Website Settings → allow this site. " +
-      "Otherwise, send the technical detail above to the site owner.";
-    loading.replaceChildren(p1, p2, p3);
+    showBootError(e);
     return;
   }
+
   wire();
+  initAuth();
+
+  /* Accessors rather than values: the check-in screen needs whatever is
+     current at the moment it saves, and main.js owns that state. */
+  await initCheckIn({
+    account: () => account,
+    location: () => state.location,
+    profileRow: () => profileRow,
+    natal: () => {
+      const p = state.profiles.find((x) => x.id === state.activeProfileId);
+      return p ? natalFor(p) : null;
+    },
+    engineReady: () => true,   // we only get here after initEphemeris resolves
+  });
   loading.hidden = true;
   $("app").hidden = false;
-  render();
+
+  /* Hard gate: no session, no app. The moon maths would run without an
+     account, but a check-in has nowhere to go, and the design treats the
+     logged-out state as the front door rather than a degraded daily view. */
+  const session = await sessionPromise;
+  await applySession(session);
+
+  if (supabase) {
+    supabase.auth.onAuthStateChange((_event, s) => { applySession(s); });
+  }
+
   startLiveClock();
 
   // After a successful boot, cache the heavy engine assets on-device so

@@ -1,200 +1,711 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lunar Tracker</title>
-  <link rel="stylesheet" href="/styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<!-- Access control is noindex-only (deploy runbook, "Resolved decisions").
+     The runbook implements that as an X-Robots-Tag response header from
+     nginx; GitHub Pages cannot set response headers, so on Pages this meta
+     tag and robots.txt are the whole mechanism. Keep both: robots.txt asks
+     crawlers not to fetch, this tells any that fetch anyway not to index. -->
+<meta name="robots" content="noindex, nofollow">
+<title>Lunar Tracker</title>
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="wrap">
-    <header class="app-header">
-      <p class="kicker">Lunar Tracker</p>
-      <div class="header-controls">
-        <select id="profile-select" aria-label="Active profile"></select>
-        <button id="manage-profiles" type="button">Profiles</button>
-        <button id="open-settings" type="button" aria-label="Location and display settings">Settings</button>
+
+<!-- ============================================================ BOOT -->
+<div id="loading" class="boot">
+  <div class="boot-inner">
+    <svg class="boot-glyph" width="46" height="46" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg>
+    <p class="brand">Lunar Tracker</p>
+    <div class="boot-bar"><span></span></div>
+    <p class="boot-title">Loading the ephemeris</p>
+    <p class="boot-note">584 KB engine &middot; 2 MB sky data. First visit only &mdash; it is cached after this.</p>
+
+    <div class="boot-error" hidden>
+      <h1>The sky didn&rsquo;t finish loading.</h1>
+      <p>The download was interrupted, so the app can&rsquo;t calculate today yet. Nothing is lost &mdash; try again when you have a steadier connection.</p>
+      <button type="button" class="btn btn-primary" data-action="retry-boot">Try again</button>
+      <p class="micro-label">Technical detail</p>
+      <p class="boot-trace">WasmInstantiationError: failed to fetch /engine/swisseph.wasm<br>net::ERR_CONNECTION_RESET &mdash; 584 KB, 61 KB received<br>attempt 3 of 3</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= APP -->
+<div id="app" hidden>
+
+  <p id="storage-notice" class="storage-notice" hidden>Your browser is blocking local storage, so check-ins can&rsquo;t be saved on this device.</p>
+
+  <!-- --------------------------------------------------------- LOGIN -->
+  <section id="screen-login" class="screen screen-centred" hidden>
+    <div class="glass card-auth">
+      <p class="wordmark"><svg width="20" height="20" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg><span class="brand">Lunar Tracker</span></p>
+
+      <div class="segmented" role="tablist" aria-label="Log in or sign up">
+        <button type="button" class="seg is-active" role="tab" aria-selected="true" data-auth="login">Log in</button>
+        <button type="button" class="seg" role="tab" aria-selected="false" data-auth="signup">Sign up</button>
+      </div>
+
+      <h1 class="display-title centred">Welcome back</h1>
+      <p class="lede centred">The moon, read through your own chart.</p>
+
+      <form class="form" novalidate>
+        <p class="field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" name="login-email" autocomplete="email" placeholder="you@example.com">
+        </p>
+        <p class="field">
+          <label for="login-password">Password</label>
+          <span class="input-affix">
+            <input type="password" id="login-password" name="login-password" autocomplete="current-password" placeholder="••••••••••">
+            <button type="button" class="affix-btn" data-action="toggle-password" aria-label="Show password" aria-pressed="false">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M1 9s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"/><circle cx="9" cy="9" r="2.3"/></svg>
+            </button>
+          </span>
+          <span class="field-error" hidden>That password doesn&rsquo;t match this email. Try again, or reset it below.</span>
+        </p>
+        <p class="field" data-signup-only hidden>
+          <label for="login-confirm">Confirm password</label>
+          <span class="input-affix">
+            <input type="password" id="login-confirm" name="login-confirm" autocomplete="new-password" placeholder="••••••••••">
+            <button type="button" class="affix-btn" data-action="toggle-password" aria-label="Show password" aria-pressed="false">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M1 9s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"/><circle cx="9" cy="9" r="2.3"/></svg>
+            </button>
+          </span>
+        </p>
+        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+      </form>
+
+      <p class="centred subtle-action"><button type="button" class="link-btn" data-auth="forgot">Forgot password?</button></p>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------- FIRST RUN -->
+  <section id="screen-first-run" class="screen screen-top" hidden>
+    <div class="glass card-setup">
+      <p class="wordmark small"><svg width="18" height="18" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg><span class="brand">Lunar Tracker</span></p>
+      <h1 class="display-title">Let&rsquo;s set up your chart.</h1>
+      <p class="lede">This is the birth information we read the moon against. You can change it later.</p>
+      <p class="cta">Add your birth details to see the moon against your own chart.</p>
+      <button type="button" id="cta-first-run" class="btn btn-primary">Set up my chart</button>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------- DAILY -->
+  <section id="screen-daily" class="screen">
+
+    <header class="app-bar glass">
+      <p class="wordmark"><svg width="18" height="18" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg><span class="brand">Lunar Tracker</span></p>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-primary btn-compact" data-action="open-checkin">Check-in</button>
+
+      <div class="account">
+        <label class="visually-hidden" for="profile-select">Profile</label>
+        <select id="profile-select" name="profile-select" hidden><option>Mara</option></select>
+        <button type="button" id="manage-profiles" class="account-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
+          <span class="account-name">Mara Ellis</span>
+          <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8.5 L10 4.5"/></svg>
+        </button>
+
+        <div id="account-menu" class="glass menu" role="menu" hidden>
+          <!-- V2: the signed-in account. Hidden until real accounts exist —
+               a fabricated name and address must never reach a screen. -->
+          <p class="menu-head" hidden><span class="menu-name"></span><span class="menu-mail"></span></p>
+          <hr class="rule">
+          <button type="button" class="menu-item" role="menuitem" data-dialog="profile-dialog">Your chart</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-history">History</button>
+          <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog">Location</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display">Display</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-data">Your data</button>
+          <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-about">About</button>
+          <hr class="rule">
+          <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out">Sign out</button>
+        </div>
       </div>
     </header>
 
-    <p id="storage-notice" class="notice" hidden>
-      Browser storage is unavailable — profiles and settings will be kept for
-      this visit only.
-    </p>
+    <div class="wrap">
 
-    <div id="loading" class="loading">Loading ephemeris…</div>
-
-    <div id="app" hidden>
-      <section class="date-head">
-        <h1 id="date-display">—</h1>
-        <nav class="date-nav" aria-label="Date selection">
-          <button id="prev-day" type="button" aria-label="Previous day">‹</button>
-          <input type="date" id="date-input" aria-label="Select date">
-          <button id="next-day" type="button" aria-label="Next day">›</button>
-          <button id="today-btn" type="button">Today</button>
-        </nav>
-        <div class="mode-toggle" role="group" aria-label="Zodiac mode">
-          <button id="mode-tropical" type="button">Tropical</button>
-          <button id="mode-sidereal" type="button">Sidereal</button>
+      <div class="date-nav">
+        <h1 id="date-display" class="display-title">Friday, August 7, 2026</h1>
+        <div class="date-controls">
+          <label class="visually-hidden" for="date-input">Choose date</label>
+          <input type="date" id="date-input" name="date-input" value="2026-08-07">
+          <button type="button" id="prev-day" class="icon-btn" aria-label="Previous day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
+          <button type="button" id="next-day" class="icon-btn" aria-label="Next day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
+          <button type="button" id="today-btn" class="ghost-btn">Today</button>
+          <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar">
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg>
+          </button>
         </div>
-      </section>
+        <div class="segmented" role="group" aria-label="Zodiac system">
+          <button type="button" id="mode-tropical" class="seg">Tropical</button>
+          <button type="button" id="mode-sidereal" class="seg is-active" aria-pressed="true">Sidereal</button>
+        </div>
+      </div>
+    </div>
 
-      <main>
-        <div class="card">
-          <div class="card-top">
-            <div id="moon-icon"></div>
-            <div>
-              <h2 id="phase-name">—</h2>
-              <p id="illum">—</p>
-              <p id="event-exact" class="event-exact" hidden></p>
-              <p id="moon-sign">—</p>
+    <!-- The sky gradient starts here — below the Tropical/Sidereal toggle. -->
+    <div class="sky">
+    <div class="wrap wrap-flush">
+
+      <div class="columns">
+
+        <div class="col">
+
+          <!-- moon card -->
+          <section class="glass moon-card" aria-labelledby="phase-name">
+            <div class="moon-head">
+              <div id="moon-icon" class="moon" aria-hidden="true"><span class="moon-glow"></span><img class="moon-photo" src="assets/moon.jpg" alt="">
+                <svg viewBox="-70 -70 140 140">
+                  <defs>
+                    <radialGradient id="moon-limb" cx="50%" cy="50%" r="50%">
+                      <stop offset="62%" stop-color="#08080A" stop-opacity="0"/>
+                      <stop offset="88%" stop-color="#08080A" stop-opacity="0.16"/>
+                      <stop offset="100%" stop-color="#08080A" stop-opacity="0.5"/>
+                    </radialGradient>
+                    <filter id="moon-term" x="-45%" y="-45%" width="190%" height="190%"><feGaussianBlur stdDeviation="2.2"/></filter>
+                    <clipPath id="moon-clip"><circle cx="0" cy="0" r="59.4"/></clipPath>
+                  </defs>
+                  <g clip-path="url(#moon-clip)">
+                    <circle class="moon-limb" cx="0" cy="0" r="60" fill="url(#moon-limb)"/>
+                    <!-- `d` is rewritten each render from the phase angle; the photo and
+                         glow are siblings and must survive, so the JS updates this one
+                         attribute rather than replacing #moon-icon's contents. -->
+                    <path id="moon-shadow" class="moon-shadow" filter="url(#moon-term)" d="M 0 -72 A 72 72 0 0 1 0 72 L 0 60 A 21.60 60 0 0 1 0 -60 Z"/>
+                  </g>
+                  <circle class="moon-rim" cx="0" cy="0" r="60"/>
+                </svg>
+              </div>
+              <div class="moon-titles">
+                <h2 id="phase-name" class="phase-name">Waning Crescent</h2>
+                <p id="illum" class="illum">32% illuminated</p>
+                <p id="event-exact" class="event-exact" hidden>New Moon exact at 1:36 pm</p>
+                <p id="moon-sign" class="moon-sign"><span class="glyph">&#9801;&#xFE0E;</span> Moon in Taurus &middot; 11&deg;40&prime; &middot; Sidereal</p>
+              </div>
             </div>
+
+            <hr class="rule">
+
+            <div class="data-grid">
+              <p class="datum"><span class="micro-label">Moonrise</span><span id="moonrise" class="value">12:10 am</span></p>
+              <p class="datum"><span class="micro-label">Moonset</span><span id="moonset" class="value">4:30 pm</span></p>
+              <p class="datum"><span class="micro-label">Sunrise</span><span id="sunrise" class="value">6:13 am</span></p>
+              <p class="datum"><span class="micro-label">Sunset</span><span id="sunset" class="value">8:32 pm</span></p>
+            </div>
+
+            <p id="next-events" class="next-events">Next: Full Moon on August 28</p>
+
+            <hr class="rule">
+
+            <button type="button" id="location-label" class="location-btn" data-dialog="settings-dialog">
+              <svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><path d="M5.5 12.2C5.5 12.2 10 8.1 10 5A4.5 4.5 0 0 0 1 5c0 3.1 4.5 7.2 4.5 7.2z"/><circle cx="5.5" cy="5" r="1.5"/></svg>
+              <span>Toronto, Canada</span>
+            </button>
+          </section>
+
+          <!-- transits (JS-populated; markup below shows the shape it injects) -->
+          <section id="transits" class="panel" aria-label="Transits">
+            <p class="micro-label">Transit</p>
+            <p class="transit-house">Moon transiting the 9th house <span class="ingress">&rarr; 10th from 6:40 pm</span></p>
+            <p class="conj">Moon &#9738; Natal Chiron <span class="orb">(orb 4.2&deg;)</span></p>
+          </section>
+
+          <!-- affirmations (JS-populated) -->
+          <section id="affirmations" class="panel panel-warm" aria-label="New Moon affirmations">
+            <p class="micro-label">New moon affirmations</p>
+            <p class="affirmation">&lsquo;I am going places!&rsquo;</p>
+            <hr class="rule">
+            <p class="affirmation">&lsquo;It&rsquo;s wonderful to be so successful!&rsquo;</p>
+            <hr class="rule">
+            <p class="affirmation">&lsquo;I love seeing my plans work out!&rsquo;</p>
+          </section>
+
+          <!-- saved check-in card -->
+          <!-- V2: the saved check-in card. Inert until the backend exists —
+               hidden so the daily view never shows invented data. -->
+          <button type="button" class="panel record-card" data-action="open-record" hidden>
+            <p class="record-head"><span class="micro-label">Your check-in</span><span class="record-date">Friday, August 7</span></p>
+            <p class="badge-row">
+              <span class="badge">Grounded</span><span class="badge">Reflective</span><span class="badge">Anxious &ndash; nervous</span><span class="badge">Tense</span><span class="badge">Heavy</span>
+            </p>
+            <p class="meter-row">
+              <span class="datum"><span class="micro-label">Energy</span><span class="value">Low</span></span>
+              <span class="datum"><span class="micro-label">Focus</span><span class="value">Scattered</span></span>
+            </p>
+            <span class="record-journal" hidden>
+              <span class="micro-label">Journal</span>
+              <span class="journal-text"></span>
+            </span>
+            <span class="cta">Open this check-in &rsaquo;</span>
+          </button>
+        </div>
+
+        <!-- readings column (JS-populated; sample shows the shape it injects) -->
+        <div class="col" id="readings">
+
+          <details class="entry" open>
+            <summary>
+              <h3 class="reading-title">Moon in Taurus <span class="seg-range">Until 4:12 pm</span></h3>
+              <span class="disclose">&times;</span>
+            </summary>
+            <div class="entry-body">
+              <div class="reading">
+                <p class="reading-h">Daily Moon in Taurus</p>
+                <p>This is a lovely Moon sign… a sensual and relaxing Moon placement, so try not to have anything too jarring to do. This is a No Rush day.</p>
+                <p class="ritual-do"><span class="micro-label">Good for…</span>Relaxing and canoodling, eating and basking.</p>
+                <p class="ritual-do"><span class="micro-label">Not so good for…</span>Doing unpleasant tasks.</p>
+                <p class="ritual-do"><span class="micro-label">Do…</span>Indulge your senses and enjoy some creature comforts.</p>
+                <p class="ritual-do"><span class="micro-label">Don&rsquo;t…</span>Be stubborn.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="entry standalone">
+            <summary>
+              <h3 class="reading-title">Full Moon Rituals</h3>
+              <span class="disclose">+</span>
+            </summary>
+            <div class="entry-body">
+              <p class="ritual-h">Full moon forgiveness ceremony
+                <button type="button" class="mark" data-ritual="full_moon_forgiveness" aria-pressed="false">Mark as done</button>
+              </p>
+              <ol class="ritual-steps">
+                <li class="ritual-step"><span class="num">1</span><span>Ritual step text is pasted in after export.</span></li>
+                <li class="ritual-step"><span class="num">2</span><span>Ritual step text is pasted in after export.</span></li>
+              </ol>
+              <p class="ritual-timing">Best performed within ten hours of the exact Full Moon.</p>
+              <p class="ritual-h">Entering a state of gratitude
+                <button type="button" class="mark is-done" data-ritual="full_moon_gratitude" aria-pressed="true">Done</button>
+              </p>
+              <p class="pending" hidden>The New Moon is exact at 1:36 pm &mdash; the wishing window opens then.</p>
+            </div>
+          </details>
+
+          <p class="empty" hidden>No readings for this day.</p>
+          <p class="none" hidden>No natal conjunctions today</p>
+          <p class="transit-note" hidden>Add a birth time to see house placements and angle conjunctions.</p>
+        </div>
+      </div>
+
+      <footer class="app-footer">Computed in-browser with Swiss Ephemeris &middot; Houses: Placidus (Tropical), Whole Sign (Sidereal) &middot; Place search &copy; OpenStreetMap contributors</footer>
+    </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ CHECK-IN -->
+  <section id="screen-checkin" class="screen" hidden>
+    <div class="wrap wrap-narrow">
+      <button type="button" class="back-btn" data-action="open-daily"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg><span>Back to today</span></button>
+      <h1 class="display-title">Daily check-in &mdash; Friday, August 7</h1>
+      <p class="lede">Log as much or as little as you like. Every field is optional.</p>
+
+      <form class="checkin-form">
+        <fieldset class="panel">
+          <legend class="micro-label">Emotions</legend>
+          <p class="helper">Select any that fit.</p>
+
+          <p class="quadrant-label">High energy &middot; pleasant</p>
+          <div class="chips">
+            <button type="button" class="chip" data-field="emotion" data-value="anxious_excited" aria-pressed="false">Anxious &ndash; excited</button>
+            <button type="button" class="chip" data-field="emotion" data-value="inspired" aria-pressed="false">Inspired</button>
+            <button type="button" class="chip" data-field="emotion" data-value="motivated" aria-pressed="false">Motivated</button>
+            <button type="button" class="chip" data-field="emotion" data-value="powerful" aria-pressed="false">Powerful</button>
+            <button type="button" class="chip" data-field="emotion" data-value="joyful" aria-pressed="false">Joyful</button>
+            <button type="button" class="chip" data-field="emotion" data-value="playful" aria-pressed="false">Playful</button>
           </div>
-          <dl class="times">
-            <div><dt>Moonrise</dt><dd id="moonrise">—</dd></div>
-            <div><dt>Moonset</dt><dd id="moonset">—</dd></div>
-            <div><dt>Sunrise</dt><dd id="sunrise">—</dd></div>
-            <div><dt>Sunset</dt><dd id="sunset">—</dd></div>
-          </dl>
-          <p id="next-events" class="next-events"></p>
-          <p class="location-line">
-            <button id="location-label" type="button" title="Change display location">—</button>
+
+          <p class="quadrant-label">High energy &middot; unpleasant</p>
+          <div class="chips">
+            <button type="button" class="chip" data-field="emotion" data-value="anxious_nervous" aria-pressed="false">Anxious &ndash; nervous</button>
+            <button type="button" class="chip" data-field="emotion" data-value="overwhelmed" aria-pressed="false">Overwhelmed</button>
+            <button type="button" class="chip" data-field="emotion" data-value="irritable" aria-pressed="false">Irritable</button>
+            <button type="button" class="chip" data-field="emotion" data-value="frustrated" aria-pressed="false">Frustrated</button>
+            <button type="button" class="chip" data-field="emotion" data-value="self_doubting" aria-pressed="false">Self-doubting</button>
+          </div>
+
+          <p class="quadrant-label">Low energy &middot; pleasant</p>
+          <div class="chips">
+            <button type="button" class="chip" data-field="emotion" data-value="grounded" aria-pressed="false">Grounded</button>
+            <button type="button" class="chip" data-field="emotion" data-value="attuned" aria-pressed="false">Attuned</button>
+            <button type="button" class="chip" data-field="emotion" data-value="grateful" aria-pressed="false">Grateful</button>
+            <button type="button" class="chip" data-field="emotion" data-value="loved" aria-pressed="false">Loved</button>
+            <button type="button" class="chip" data-field="emotion" data-value="content" aria-pressed="false">Content</button>
+          </div>
+
+          <p class="quadrant-label">Low energy &middot; unpleasant</p>
+          <div class="chips">
+            <button type="button" class="chip" data-field="emotion" data-value="sad" aria-pressed="false">Sad</button>
+            <button type="button" class="chip" data-field="emotion" data-value="empty" aria-pressed="false">Empty</button>
+            <button type="button" class="chip" data-field="emotion" data-value="lonely" aria-pressed="false">Lonely</button>
+            <button type="button" class="chip" data-field="emotion" data-value="disinterested" aria-pressed="false">Disinterested</button>
+            <button type="button" class="chip" data-field="emotion" data-value="discouraged" aria-pressed="false">Discouraged</button>
+          </div>
+
+          <p class="quadrant-label">Neutral</p>
+          <div class="chips">
+            <button type="button" class="chip" data-field="emotion" data-value="neutral" aria-pressed="false">Neutral</button>
+            <button type="button" class="chip" data-field="emotion" data-value="nostalgic" aria-pressed="false">Nostalgic</button>
+            <button type="button" class="chip" data-field="emotion" data-value="curious" aria-pressed="false">Curious</button>
+            <button type="button" class="chip" data-field="emotion" data-value="reflective" aria-pressed="false">Reflective</button>
+            <button type="button" class="chip" data-field="emotion" data-value="calm" aria-pressed="false">Calm</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend class="micro-label">Body</legend>
+          <p class="helper">Select any that fit.</p>
+          <div class="chips">
+            <button type="button" class="chip" data-field="body" data-value="headachey" aria-pressed="false">Headachey</button>
+            <button type="button" class="chip" data-field="body" data-value="nauseous" aria-pressed="false">Nauseous</button>
+            <button type="button" class="chip" data-field="body" data-value="tense" aria-pressed="false">Tense</button>
+            <button type="button" class="chip" data-field="body" data-value="sore" aria-pressed="false">Sore</button>
+            <button type="button" class="chip" data-field="body" data-value="achey" aria-pressed="false">Achey</button>
+            <button type="button" class="chip" data-field="body" data-value="bloated" aria-pressed="false">Bloated</button>
+            <button type="button" class="chip" data-field="body" data-value="horny" aria-pressed="false">Horny</button>
+            <button type="button" class="chip" data-field="body" data-value="restless" aria-pressed="false">Restless</button>
+            <button type="button" class="chip" data-field="body" data-value="heavy" aria-pressed="false">Heavy</button>
+            <button type="button" class="chip" data-field="body" data-value="numb" aria-pressed="false">Numb</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend class="micro-label">Energy</legend>
+          <p class="helper">Optional.</p>
+          <div class="ladder">
+            <button type="button" class="rung" data-field="energy" data-value="fatigued" aria-pressed="false"><span class="bar" style="--rung:1"></span><span>Fatigued / Exhausted</span></button>
+            <button type="button" class="rung" data-field="energy" data-value="low" aria-pressed="false"><span class="bar" style="--rung:2"></span><span>Low</span></button>
+            <button type="button" class="rung" data-field="energy" data-value="steady" aria-pressed="false"><span class="bar" style="--rung:3"></span><span>Steady</span></button>
+            <button type="button" class="rung" data-field="energy" data-value="energized" aria-pressed="false"><span class="bar" style="--rung:4"></span><span>Energized</span></button>
+            <button type="button" class="rung" data-field="energy" data-value="wired" aria-pressed="false"><span class="bar" style="--rung:5"></span><span>Wired</span></button>
+          </div>
+          <p class="off-scale"><span>Off the scale</span></p>
+          <div class="chips chips-inline">
+            <button type="button" class="chip" data-field="energy" data-value="fluctuating" aria-pressed="false">Fluctuating</button>
+            <span class="helper">Describes variability through the day, not a level.</span>
+          </div>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend class="micro-label">Focus</legend>
+          <p class="helper">Optional.</p>
+          <div class="chips">
+            <button type="button" class="chip chip-lg" data-field="focus" data-value="scattered" aria-pressed="false">Scattered</button>
+            <button type="button" class="chip chip-lg" data-field="focus" data-value="present" aria-pressed="false">Present</button>
+            <button type="button" class="chip chip-lg" data-field="focus" data-value="focused" aria-pressed="false">Focused</button>
+          </div>
+        </fieldset>
+
+        <p class="panel">
+          <label class="micro-label" for="journal">Journal</label>
+          <textarea id="journal" name="journal" rows="5" placeholder="Anything you want to note about today…"></textarea>
+        </p>
+
+        <p class="save-row">
+          <button type="submit" class="btn btn-primary">Save check-in</button>
+          <span class="helper">Nothing selected yet &mdash; that&rsquo;s fine.</span>
+        </p>
+
+        <div class="panel confirm" hidden>
+          <p class="confirm-title">Set this down for today?</p>
+          <p class="helper">A saved check-in can&rsquo;t be changed afterwards &mdash; it records how the day actually felt.</p>
+          <p class="btn-row">
+            <button type="button" class="btn btn-primary">Save it</button>
+            <button type="button" class="btn btn-ghost">Keep editing</button>
           </p>
         </div>
 
-        <div id="transits"></div>
-        <div id="affirmations"></div>
-        <div id="readings"></div>
-      </main>
-
-      <footer>
-        <!-- The OpenStreetMap credit is required by their licence for using
-             Nominatim, so it stays here. The AGPL source offer lives in
-             Settings → About. -->
-        Computed in-browser with Swiss Ephemeris · Houses: Placidus ·
-        Place search © OpenStreetMap contributors
-      </footer>
-    </div>
-  </div>
-
-  <!-- ── Profile manager ── -->
-  <dialog id="profile-dialog">
-    <div id="profile-list-view">
-      <h2>Natal profiles</h2>
-      <ul id="profile-list"></ul>
-      <div class="dialog-actions">
-        <button id="new-profile" type="button" class="primary">＋ New profile</button>
-        <button id="close-profiles" type="button">Close</button>
-      </div>
-    </div>
-
-    <form id="profile-form" hidden novalidate>
-      <h2 id="profile-form-title">New profile</h2>
-
-      <label for="pf-name">Profile name</label>
-      <input id="pf-name" type="text" required maxlength="60" autocomplete="off">
-
-      <label for="pf-date">Birth date</label>
-      <input id="pf-date" type="date" required min="1800-01-01" max="2399-12-31">
-
-      <label for="pf-time">Birth time</label>
-      <div class="row">
-        <input id="pf-time" type="time">
-        <label class="check"><input id="pf-time-unknown" type="checkbox"> Time unknown</label>
-      </div>
-
-      <label for="pf-place">Birth place</label>
-      <input id="pf-place" type="text" placeholder="Search a city or town…" autocomplete="off">
-      <ul id="pf-place-results" class="place-results" hidden></ul>
-      <p id="pf-place-chosen" class="chosen-place"></p>
-
-      <details id="pf-manual">
-        <summary>Enter coordinates manually</summary>
-        <div class="row">
-          <label>Latitude <input id="pf-lat" type="number" step="any" min="-90" max="90" placeholder="52.267"></label>
-          <label>Longitude <input id="pf-lon" type="number" step="any" min="-180" max="180" placeholder="12.933"></label>
-        </div>
-        <p class="hint">Positive = north/east, negative = south/west.</p>
-      </details>
-
-      <label for="pf-tz">Timezone <span id="pf-tz-auto" class="tag" hidden>auto</span></label>
-      <input id="pf-tz" type="text" list="tz-list" autocomplete="off" placeholder="Europe/Berlin">
-
-      <p id="pf-error" class="form-error" hidden></p>
-
-      <div class="dialog-actions">
-        <button type="submit" class="primary">Save profile</button>
-        <button id="pf-cancel" type="button">Cancel</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- ── Display location ── -->
-  <dialog id="settings-dialog">
-    <form id="location-form" novalidate>
-      <h2>Settings</h2>
-      <h3 class="settings-sub">Display location</h3>
-      <p class="hint">Drives moonrise/moonset, sunrise/sunset, and the local
-        calendar day. Your natal chart is unaffected.</p>
-
-      <label for="loc-place">City search</label>
-      <input id="loc-place" type="text" placeholder="Search a city…" autocomplete="off">
-      <ul id="loc-place-results" class="place-results" hidden></ul>
-      <p id="loc-place-chosen" class="chosen-place"></p>
-
-      <details id="loc-manual">
-        <summary>Enter coordinates manually</summary>
-        <div class="row">
-          <label>Latitude <input id="loc-lat" type="number" step="any" min="-90" max="90"></label>
-          <label>Longitude <input id="loc-lon" type="number" step="any" min="-180" max="180"></label>
-        </div>
-      </details>
-
-      <label for="loc-tz">Timezone <span id="loc-tz-auto" class="tag" hidden>auto</span></label>
-      <input id="loc-tz" type="text" list="tz-list" autocomplete="off">
-
-      <h3 class="settings-sub">Display options</h3>
-      <label class="check option-row"><input id="opt-affirmations" type="checkbox">
-        Show New Moon affirmations</label>
-      <p class="hint">Affirmations for the natal house of the most recent New
-        Moon, shown for 28 days. Applies immediately.</p>
-
-      <label class="check option-row"><input id="opt-transitions" type="checkbox">
-        Show transition times</label>
-      <p class="hint">When the Moon changes sign or house during a day, note
-        the time it happens.</p>
-
-      <label class="check option-row"><input id="opt-both-readings" type="checkbox">
-        Show both readings on transition days</label>
-      <p class="hint">On today, also show the reading the Moon moves into
-        later. Past and future days always show both.</p>
-
-      <p id="loc-error" class="form-error" hidden></p>
-
-      <div class="dialog-actions">
-        <button type="submit" class="primary">Save location</button>
-        <button id="loc-cancel" type="button">Cancel</button>
-      </div>
-
-      <!-- About: this carries the AGPL source offer. Swiss Ephemeris is
-           AGPL-licensed and its engine is shipped to every visitor, so the
-           source of the deployed version must stay reachable from the app
-           itself — a public repo nobody can find is not an offer. Keep this
-           link working; it is the only place the offer now appears. -->
-      <section class="about">
-        <p class="micro-label">About</p>
-        <p class="hint">
-          Lunar Tracker · positions from the
-          <a href="https://www.astro.com/swisseph/" rel="noopener">Swiss Ephemeris</a>.
-          This app is free software under the
-          <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener">AGPL-3.0</a>:
-          <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" rel="noopener">read or download the source</a>.
+        <p class="panel saved-row" hidden>
+          <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path d="M6 10.2 L8.9 13 L14.2 7"/></svg>
+          <span><span class="saved-title">Saved</span><span class="helper">Recorded for Friday, August 7.</span></span>
         </p>
-      </section>
-    </form>
-  </dialog>
+      </form>
+    </div>
+  </section>
 
-  <datalist id="tz-list"></datalist>
+  <!-- -------------------------------------------------- SAVED RECORD -->
+  <section id="screen-record" class="screen" hidden>
+    <div class="wrap wrap-narrow">
+      <button type="button" class="back-btn" data-action="open-daily"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg><span>Back to daily view</span></button>
+      <h1 class="display-title">Your check-in &mdash; Friday, August 7</h1>
+
+      <div class="date-controls">
+        <button type="button" class="icon-btn" data-action="prev-day" aria-label="Previous day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
+        <button type="button" class="icon-btn" data-action="next-day" aria-label="Next day"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
+        <button type="button" class="icon-btn" data-dialog="dialog-history" aria-label="Open history calendar"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.7" y="3" width="12.6" height="11" rx="2"/><path d="M1.7 6.4 H14.3"/><path d="M5 1.6 V3.6 M11 1.6 V3.6"/></svg></button>
+        <button type="button" class="ghost-btn" data-action="today">Today</button>
+      </div>
+
+      <section class="glass moon-card moon-card-compact">
+        <div class="moon-head">
+          <div class="moon moon-sm" aria-hidden="true"><span class="moon-glow"></span><img class="moon-photo" src="assets/moon.jpg" alt=""><svg viewBox="-70 -70 140 140"><defs><radialGradient id="moon-limb-sm" cx="50%" cy="50%" r="50%"><stop offset="62%" stop-color="#08080A" stop-opacity="0"/><stop offset="88%" stop-color="#08080A" stop-opacity="0.16"/><stop offset="100%" stop-color="#08080A" stop-opacity="0.5"/></radialGradient><filter id="moon-term-sm" x="-45%" y="-45%" width="190%" height="190%"><feGaussianBlur stdDeviation="2.2"/></filter><clipPath id="moon-clip-sm"><circle cx="0" cy="0" r="59.4"/></clipPath></defs><g clip-path="url(#moon-clip-sm)"><circle class="moon-limb" cx="0" cy="0" r="60" fill="url(#moon-limb-sm)"/><path class="moon-shadow" filter="url(#moon-term-sm)" d="M 0 -72 A 72 72 0 0 1 0 72 L 0 60 A 21.60 60 0 0 1 0 -60 Z"/></g><circle class="moon-rim" cx="0" cy="0" r="60"/></svg></div>
+          <div class="moon-titles">
+            <p class="micro-label">That day&rsquo;s moon</p>
+            <h2 class="phase-name">Waning Crescent</h2>
+            <p class="illum">32% illuminated</p>
+          </div>
+          <div class="segmented" role="group" aria-label="Zodiac system">
+            <button type="button" class="seg">Tropical</button>
+            <button type="button" class="seg is-active" aria-pressed="true">Sidereal</button>
+          </div>
+        </div>
+        <hr class="rule">
+        <div class="data-grid">
+          <p class="datum"><span class="micro-label">Sign</span><span class="value"><span class="glyph">&#9801;&#xFE0E;</span> Taurus &middot; 11&deg;40&prime; &middot; Sidereal</span></p>
+          <p class="datum"><span class="micro-label">House</span><span class="value">9th house</span></p>
+          <p class="datum datum-wide"><span class="micro-label">Transit</span><span class="value conj">Moon &#9738; Natal Chiron <span class="orb">(orb 4.2&deg;)</span></span></p>
+        </div>
+        <button type="button" class="link-btn" data-action="open-daily">Open this day&rsquo;s reading &rsaquo;</button>
+      </section>
+
+      <section class="panel">
+        <p class="record-head"><span class="micro-label">Your check-in</span><span class="record-date">Friday, August 7</span></p>
+        <p class="badge-row">
+          <span class="badge">Grounded</span><span class="badge">Reflective</span><span class="badge">Anxious &ndash; nervous</span><span class="badge">Tense</span><span class="badge">Heavy</span>
+        </p>
+        <p class="meter-row">
+          <span class="datum"><span class="micro-label">Energy</span><span class="value">Low</span></span>
+          <span class="datum"><span class="micro-label">Focus</span><span class="value">Scattered</span></span>
+        </p>
+        <hr class="rule">
+        <p class="micro-label">Journal</p>
+        <p class="journal-text">Slow start, but the afternoon opened up. Long walk after dinner, and the sky was completely clear by the time the moon came up.</p>
+      </section>
+
+      <section class="panel">
+        <p class="micro-label">Full Moon Rituals</p>
+        <p class="ritual-h">Full moon forgiveness ceremony <span class="mark">Not done</span></p>
+        <p class="ritual-h">Entering a state of gratitude <span class="mark is-done">Done</span></p>
+        <button type="button" class="link-btn" data-action="open-daily">Open the ritual &rsaquo;</button>
+      </section>
+    </div>
+  </section>
+</div>
+
+<!-- ==================================================== YOUR CHART -->
+<dialog id="profile-dialog" class="dialog">
+  <div id="dialog-chart" class="glass dialog-card">
+    <p class="dialog-head"><span class="dialog-title">Your chart</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+
+    <!-- The chart at rest: current values, read-only, with Edit revealing
+         the form below. The static export only captured the edit branch of
+         this dialog, so this markup is rebuilt from the design source — a
+         div rather than the exported <ul>, since it holds label/value
+         pairs and not a list of profiles. -->
+    <div id="profile-list-view" hidden>
+      <div id="profile-list" class="chart-view"></div>
+      <div class="dialog-actions">
+        <button type="button" id="new-profile" class="btn btn-primary">Edit</button>
+        <button type="button" id="close-profiles" class="btn btn-ghost">Close</button>
+      </div>
+    </div>
+
+    <form id="profile-form" class="form">
+      <h2 id="profile-form-title" class="visually-hidden">Edit your chart</h2>
+      <p id="pf-error" class="field-error" hidden>Check the highlighted fields.</p>
+
+      <p class="field">
+        <label for="pf-name">Profile name</label>
+        <input type="text" id="pf-name" name="pf-name" value="Mara">
+      </p>
+
+      <div class="field-row">
+        <p class="field">
+          <label for="pf-date">Birth date</label>
+          <input type="date" id="pf-date" name="pf-date" value="1993-03-14">
+        </p>
+        <p class="field">
+          <label for="pf-time">Birth time</label>
+          <input type="time" id="pf-time" name="pf-time" value="04:35">
+        </p>
+      </div>
+
+      <p class="check">
+        <input type="checkbox" id="pf-time-unknown" name="pf-time-unknown">
+        <label for="pf-time-unknown">I don&rsquo;t know my birth time</label>
+        <span class="helper">Without a birth time we can&rsquo;t calculate houses or angles.</span>
+      </p>
+
+      <p class="field">
+        <label for="pf-place">Birth place</label>
+        <input type="text" id="pf-place" name="pf-place" placeholder="Search for a city…" autocomplete="off">
+        <span id="pf-place-chosen" class="chosen">Berlin, Germany</span>
+        <ul id="pf-place-results" class="results" hidden></ul>
+      </p>
+
+      <details id="pf-manual" class="disclose-block">
+        <summary>Enter coordinates manually</summary>
+        <div class="field-row">
+          <p class="field"><label for="pf-lat">Latitude</label><input type="text" id="pf-lat" name="pf-lat" inputmode="decimal" value="52.5200"></p>
+          <p class="field"><label for="pf-lon">Longitude</label><input type="text" id="pf-lon" name="pf-lon" inputmode="decimal" value="13.4050"></p>
+        </div>
+      </details>
+
+      <p class="field">
+        <label for="pf-tz">Timezone</label>
+        <input type="text" id="pf-tz" name="pf-tz" list="tz-list" value="Europe/Berlin">
+        <span id="pf-tz-auto" class="auto-tag">(auto)</span>
+      </p>
+
+      <p class="btn-row">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" id="pf-cancel" class="btn btn-ghost">Cancel</button>
+      </p>
+    </form>
+  </div>
+</dialog>
+
+<!-- ====================================================== LOCATION -->
+<dialog id="settings-dialog" class="dialog">
+  <div id="dialog-location" class="glass dialog-card">
+    <p class="dialog-head"><span class="dialog-title">Location</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+
+    <form id="location-form" class="form">
+      <p class="micro-label">Display location</p>
+      <p class="helper">Drives moonrise/moonset, sunrise/sunset, and the local calendar day. Your natal chart is unaffected.</p>
+      <p id="loc-error" class="field-error" hidden>Couldn&rsquo;t reach the place search.</p>
+
+      <p class="field">
+        <label for="loc-place">City</label>
+        <input type="text" id="loc-place" name="loc-place" placeholder="Search a city…" autocomplete="off">
+        <span id="loc-place-chosen" class="chosen">Current: Toronto, Canada</span>
+        <ul id="loc-place-results" class="results" hidden></ul>
+      </p>
+
+      <details id="loc-manual" class="disclose-block">
+        <summary>Enter coordinates manually</summary>
+        <div class="field-row">
+          <p class="field"><label for="loc-lat">Latitude</label><input type="text" id="loc-lat" name="loc-lat" inputmode="decimal" value="43.6532"></p>
+          <p class="field"><label for="loc-lon">Longitude</label><input type="text" id="loc-lon" name="loc-lon" inputmode="decimal" value="-79.3832"></p>
+        </div>
+      </details>
+
+      <p class="field">
+        <label for="loc-tz">Timezone</label>
+        <input type="text" id="loc-tz" name="loc-tz" list="tz-list" value="America/Toronto">
+        <span id="loc-tz-auto" class="auto-tag">(auto)</span>
+      </p>
+
+      <p class="btn-row">
+        <button type="submit" class="btn btn-primary">Save location</button>
+        <button type="button" id="loc-cancel" class="btn btn-ghost">Cancel</button>
+      </p>
+    </form>
+  </div>
+</dialog>
+
+<!-- ======================================================= DISPLAY -->
+<dialog id="dialog-display" class="dialog">
+  <div class="glass dialog-card">
+    <p class="dialog-head"><span class="dialog-title">Display</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+    <p class="micro-label">Display options</p>
+
+    <p class="switch-row">
+      <span class="switch-text"><span class="switch-title">Show New Moon affirmations</span><span class="helper">Affirmations for the natal house of the most recent New Moon, shown for 28 days. Applies immediately.</span></span>
+      <input type="checkbox" class="switch" id="opt-affirmations" name="opt-affirmations" checked>
+    </p>
+    <hr class="rule">
+    <p class="switch-row">
+      <span class="switch-text"><span class="switch-title">Show transition times</span><span class="helper">When the Moon changes sign or house during a day, note the time it happens.</span></span>
+      <input type="checkbox" class="switch" id="opt-transitions" name="opt-transitions" checked>
+    </p>
+    <hr class="rule">
+    <p class="switch-row">
+      <span class="switch-text"><span class="switch-title">Show both readings on transition days</span><span class="helper">On today, also show the reading the Moon moves into later, alongside the current one. Past and future days always show both.</span></span>
+      <input type="checkbox" class="switch" id="opt-both-readings" name="opt-both-readings">
+    </p>
+    <hr class="rule">
+    <p class="switch-row">
+      <span class="switch-text"><span class="switch-title">Show your check-in on the daily view</span><span class="helper">The saved check-in card, shown on days you checked in. Turning it off hides the card &mdash; your check-ins are kept either way.</span></span>
+      <input type="checkbox" class="switch" id="opt-record-card" name="opt-record-card" checked>
+    </p>
+
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+  </div>
+</dialog>
+
+<!-- ====================================================== YOUR DATA -->
+<dialog id="dialog-data" class="dialog">
+  <div class="glass dialog-card">
+    <p class="dialog-head"><span class="dialog-title">Your data</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+
+    <p class="micro-label">Export</p>
+    <p class="helper">Everything on your account &mdash; your chart, every check-in with the sky it was saved under, and your ritual marks &mdash; as a single JSON file. Yours to keep, readable without this app.</p>
+    <p class="btn-row"><button type="button" class="btn btn-ghost" data-action="export-data">Download my data</button></p>
+    <p class="data-note helper" hidden></p>
+
+    <hr class="rule">
+
+    <p class="micro-label">Delete account</p>
+    <p class="helper">This deletes your account and everything in it: your chart, all your check-ins, and every ritual mark. It happens immediately and <strong>cannot be undone</strong> &mdash; there is no copy for us to restore from. Download your data first if you want to keep it.</p>
+
+    <div class="danger-confirm" hidden>
+      <p class="field">
+        <label for="delete-confirm">Type <strong>DELETE</strong> to confirm</label>
+        <input type="text" id="delete-confirm" name="delete-confirm" autocomplete="off" spellcheck="false" placeholder="DELETE">
+      </p>
+      <p class="data-error helper" hidden></p>
+      <p class="btn-row">
+        <button type="button" class="btn btn-danger" data-action="delete-confirm" disabled>Delete everything</button>
+        <button type="button" class="btn btn-ghost" data-action="delete-cancel">Cancel</button>
+      </p>
+    </div>
+
+    <p class="btn-row danger-start"><button type="button" class="btn btn-ghost btn-danger-quiet" data-action="delete-start">Delete my account</button></p>
+
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+  </div>
+</dialog>
+
+<!-- ========================================================= ABOUT -->
+<dialog id="dialog-about" class="dialog">
+  <div class="glass dialog-card">
+    <p class="dialog-head"><span class="dialog-title">About</span><button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button></p>
+    <p class="micro-label">About</p>
+    <p class="about-line">Lunar Tracker</p>
+    <p class="helper">Positions computed with the Swiss Ephemeris, in your browser.</p>
+    <p class="helper">This app is free software under the AGPL-3.0: <a href="https://github.com/dakusuyoga/Lunar_Tracker_App" target="_blank" rel="noopener noreferrer">read or download the source</a>.</p>
+    <p class="btn-row"><button type="button" class="btn btn-primary" data-action="close-dialog">Done</button></p>
+  </div>
+</dialog>
+
+<!-- ======================================================= HISTORY -->
+<dialog id="dialog-history" class="dialog">
+  <div class="glass dialog-card">
+    <p class="dialog-head">
+      <span class="dialog-title">August 2026</span>
+      <button type="button" class="icon-btn" data-action="prev-month" aria-label="Previous month"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2 L3.5 6 L7.5 10"/></svg></button>
+      <button type="button" class="icon-btn" data-action="next-month" aria-label="Next month"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2 L8.5 6 L4.5 10"/></svg></button>
+      <button type="button" class="icon-btn icon-btn-quiet" data-action="close-dialog" aria-label="Close">&times;</button>
+    </p>
+    <p class="cal-legend"><button type="button" class="ghost-btn" data-action="this-month">This month</button><span class="legend-key">Checked in</span></p>
+    <hr class="rule">
+    <div class="calendar">
+      <span class="cal-dow">S</span><span class="cal-dow">M</span><span class="cal-dow">T</span><span class="cal-dow">W</span><span class="cal-dow">T</span><span class="cal-dow">F</span><span class="cal-dow">S</span>
+      <span class="cal-pad"></span><span class="cal-pad"></span><span class="cal-pad"></span><span class="cal-pad"></span><span class="cal-pad"></span><span class="cal-pad"></span>
+      <button type="button" class="cal-day has-record">1<span class="dot"></span></button>
+      <button type="button" class="cal-day has-record">2<span class="dot"></span></button>
+      <button type="button" class="cal-day has-record">3<span class="dot"></span></button>
+      <button type="button" class="cal-day">4<span class="dot"></span></button>
+      <button type="button" class="cal-day has-record">5<span class="dot"></span></button>
+      <button type="button" class="cal-day has-record">6<span class="dot"></span></button>
+      <button type="button" class="cal-day is-today has-record">7<span class="dot"></span></button>
+      <button type="button" class="cal-day is-future" disabled>8<span class="dot"></span></button>
+      <button type="button" class="cal-day is-future" disabled>9<span class="dot"></span></button>
+    </div>
+    <p class="empty" hidden>No check-ins this month.</p>
+  </div>
+</dialog>
+
+<datalist id="tz-list">
+  <option value="America/Toronto"></option>
+  <option value="Europe/Berlin"></option>
+  <option value="Europe/London"></option>
+  <option value="UTC"></option>
+</datalist>
 
   <script type="module" src="/src/main.js"></script>
 </body>

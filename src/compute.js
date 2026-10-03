@@ -125,11 +125,33 @@ function computeNatal(profile) {
   };
 }
 
-// Natal cusps in the active zodiac mode (sidereal uses the natal ayanāṁśa).
+/* Natal house cusps in the active zodiac mode.
+
+   The two modes use *different house systems*, not one system relabelled:
+
+   - tropical → Placidus, the Western convention: unequal houses derived
+     from the birth latitude and sidereal time.
+   - sidereal → whole sign, as sidereal and Jyotish practice uses: the sign
+     holding the Ascendant is the 1st house in its entirety, the next sign
+     is the 2nd, and so on. Cusps fall on sign boundaries.
+
+   An earlier version subtracted the ayanāṁśa from the Placidus cusps,
+   which keeps the Western frame and merely renames it — the house sizes
+   stayed unequal and the boundaries stayed off the sign lines. That is not
+   how a sidereal chart is read.
+
+   A side effect worth knowing: with whole sign, a planet's house changes
+   exactly when its sign changes, so in sidereal mode house ingresses and
+   sign ingresses coincide by definition. Houses also stop depending on
+   latitude, so extreme latitudes no longer distort them. */
 export function modalCusps(natal, mode) {
   if (!natal || !natal.cusps) return null;
-  if (mode === "sidereal") return natal.cusps.map((c) => norm360(c - natal.ayanamsa));
-  return natal.cusps.slice();
+  if (mode !== "sidereal") return natal.cusps.slice();
+
+  const asc = natal.angles && natal.angles.Ascendant;
+  if (asc === undefined) return null;      // no birth time, no Ascendant
+  const firstSign = Math.floor(norm360(asc - natal.ayanamsa) / 30);
+  return Array.from({ length: 12 }, (_, i) => ((firstSign + i) % 12) * 30);
 }
 
 /* ── Daily view ──────────────────────────────────────────────────── */
@@ -216,6 +238,49 @@ function phaseName(angle) {
   if (angle < 180) return "Waxing Gibbous";
   if (angle < 270) return "Waning Gibbous";
   return "Waning Crescent";
+}
+
+/* The moon-context for a check-in: sign, natal house and conjunctions at
+   one exact instant, in one zodiac mode.
+
+   This exists rather than calling computeDay twice because a check-in must
+   record BOTH modes from a SINGLE instant. computeDay reads the clock
+   itself, so two calls would land milliseconds apart and could disagree
+   near a boundary — the exact class of silent inconsistency the both-mode
+   rule is meant to prevent. Callers pass the instant in.
+
+   Sidereal uses two ayanāṁśas, matching the daily view: the transiting
+   Moon is shifted by the value at `instant`, natal points and cusps by the
+   value at birth. Collapsing them to one would make the sidereal house and
+   conjunction columns exact copies of the tropical ones. */
+export function moonContextAt(instant, natal, mode) {
+  const jd = jdFromDate(instant);
+  const moonTrop = calcLon(jd, "Moon").lon;
+  const moonLon = modal(moonTrop, lahiriAyanamsa(jd), mode);
+
+  const usable = natal && !natal.invalid;
+  const cusps = usable ? modalCusps(natal, mode) : null;
+
+  let conjunctions = [];
+  if (usable) {
+    for (const key of CONJUNCTION_POINTS) {
+      const src = key in (natal.angles || {}) ? natal.angles : natal.points;
+      const lonTrop = src ? src[key] : undefined;
+      if (lonTrop === undefined) continue;
+      const orb = Math.abs(wrap180(moonLon - modal(lonTrop, natal.ayanamsa, mode)));
+      if (orb <= CONJUNCTION_ORB) {
+        conjunctions.push({ point: key, orb: Number(orb.toFixed(3)) });
+      }
+    }
+    conjunctions.sort((a, b) => a.orb - b.orb);
+  }
+
+  return {
+    sign: signKey(moonLon),
+    house: cusps ? houseOf(moonLon, cusps) : null,
+    conjunctions,
+    moonLonTropical: moonTrop,
+  };
 }
 
 /* Everything the daily view needs for one local calendar date.
