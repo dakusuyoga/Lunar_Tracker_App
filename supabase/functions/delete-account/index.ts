@@ -42,8 +42,13 @@ function corsFor(req: Request) {
   const allow = ALLOWED.includes("*")
     ? (origin || "*")
     : (ALLOWED.includes(origin) ? origin : "");
+  /* supabase-js attaches `apikey` and `x-client-info` to every invoke, so
+     a list naming only `authorization` fails the preflight and the real
+     request is never sent. Allowing a header costs nothing — the browser
+     is asking what it may send, not what it may read. */
   const h: Record<string, string> = {
-    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, content-type, apikey, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
