@@ -21,29 +21,45 @@
    do not add them as secrets and never copy the service key anywhere else. */
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-/* The app is served from one origin; anything else has no business
-   calling this. Set ALLOWED_ORIGIN as a secret when the domain changes:
-     supabase secrets set ALLOWED_ORIGIN=https://lunar.daxyogatherapy.com
+/* Which origins may call this. A comma-separated list, because the app
+   has to work from the dev server and from production without one of
+   them being left permissive:
+
+     supabase secrets set ALLOWED_ORIGIN=https://lunar.daxyogatherapy.com,http://localhost:5173
 
    CORS is not the security boundary here — the JWT check is — but a
    narrow origin keeps a stray page on another site from quietly firing
-   this at a logged-in browser. */
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
+   this at a logged-in browser. Unset means "*", which is why it should
+   be set before launch.
 
-const cors = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Vary": "Origin",
-};
+   The header must echo ONE origin, not the list, so the request's own
+   Origin is matched against the list and returned when it's on it. */
+const ALLOWED = (Deno.env.get("ALLOWED_ORIGIN") ?? "*")
+  .split(",").map((s) => s.trim()).filter(Boolean);
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
+function corsFor(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allow = ALLOWED.includes("*")
+    ? (origin || "*")
+    : (ALLOWED.includes(origin) ? origin : "");
+  const h: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+  if (allow) h["Access-Control-Allow-Origin"] = allow;
+  return h;
+}
 
 Deno.serve(async (req) => {
+  const cors = corsFor(req);
+
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 

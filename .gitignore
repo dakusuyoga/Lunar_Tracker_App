@@ -4,3 +4,7 @@ dist/
 .claude/
 .vite/
 .env.local
+
+# Supabase CLI scratch — holds the pooler connection string, and this
+# repo is mirrored publicly for the AGPL source offer.
+supabase/.temp/
