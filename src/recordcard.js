@@ -68,5 +68,15 @@ export function renderRecordCard(row, dateISO, timezone) {
     meters.hidden = parts.length === 0;
   }
 
+  /* A few lines of the journal, clamped in CSS rather than cut here: the
+     full text stays in the DOM, so the card never shows a sentence the
+     check-in didn't contain, and "Open this check-in" leads to the rest. */
+  const journal = card.querySelector(".record-journal");
+  if (journal) {
+    const text = (row.journal_text || "").trim();
+    journal.querySelector(".journal-text").textContent = text;
+    journal.hidden = !text;
+  }
+
   card.hidden = false;
 }

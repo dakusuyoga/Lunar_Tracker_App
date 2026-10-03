@@ -908,3 +908,15 @@ span.mark { cursor: default; }
 .chart-view .rule { margin: 0; }
 .chart-view .helper { display: block; margin-top: 6px; }
 #profile-list-view .dialog-actions { margin-top: 24px; }
+
+/* The card's journal excerpt. The card is a <button>, so this is spans
+   rather than <p>/<hr> — the hairline is a border, matching .cta's. */
+.record-journal {
+  display: block;
+  margin-top: 20px; padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+.record-journal .journal-text {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  overflow: hidden;
+}
