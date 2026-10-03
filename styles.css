@@ -1000,3 +1000,75 @@ span.mark { cursor: default; }
 .lang-link:hover { color: var(--ink); }
 .lang-link.is-active { color: var(--gold); font-weight: 600; }
 .lang-sep { color: var(--hairline); font-size: 13px; }
+
+/* ------------------------------------------- 21. ONBOARDING CAROUSEL */
+/* Full-screen over the page gradient, with one centred glass panel — the
+   same frosted treatment as the login card. The phone rule in section 16
+   already swaps .glass for solid navy, so nothing extra is needed there. */
+.onboarding {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0;
+  background: var(--sky-gradient); color: inherit;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+.onboarding[open] {
+  display: flex;
+  padding: clamp(16px, 4vw, 48px) var(--gutter);
+}
+.onboarding::backdrop { background: var(--sky-zenith); }
+.onboard-card {
+  width: 100%; max-width: 520px;
+  margin: auto;                      /* centres, and stays scrollable when short */
+  border-radius: 26px;
+  padding: clamp(22px, 4vw, 36px);
+  animation: rise .26s ease both;
+}
+.onboard-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.onboard-skip { min-height: var(--tap); padding: 0 4px; color: var(--ink-muted); }
+.onboard-skip:hover { color: var(--gold-bright); }
+
+.onboard-viewport { overflow: hidden; margin: 8px 0 0; touch-action: pan-y; }
+.onboard-track {
+  display: flex; align-items: stretch;   /* panels share the tallest height, so nothing jumps */
+  transition: transform .34s cubic-bezier(.3, .7, .2, 1);
+}
+.onboard-track.is-dragging { transition: none; }
+.onboard-panel {
+  flex: 0 0 100%; min-width: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: clamp(20px, 4vw, 34px) 2px 8px;
+  text-align: center;
+}
+.onboard-icon { fill: none; stroke: var(--gold); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.onboard-title {
+  margin-top: 22px;
+  font-family: var(--font-display); font-optical-sizing: auto;
+  font-weight: 400; font-size: clamp(24px, 4.2vw, 31px);
+  line-height: 1.18; letter-spacing: -.015em; text-wrap: balance;
+}
+.onboard-body { margin-top: 14px; max-width: 42ch; font-size: 15.5px; line-height: 1.65; text-wrap: pretty; }
+.onboard-note { margin-top: 14px; max-width: 42ch; font-size: 13.5px; line-height: 1.6; color: var(--ink-muted); text-wrap: pretty; }
+
+.onboard-dots { display: flex; justify-content: center; margin-top: 10px; }
+.onboard-dot {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  width: 28px; height: var(--tap);
+  display: inline-flex; align-items: center; justify-content: center;
+  touch-action: manipulation;
+}
+.onboard-dot::before {
+  content: ''; width: 7px; height: 7px; border-radius: 999px;
+  background: rgba(233, 229, 219, .26);
+  transition: width .25s ease, background .25s ease;
+}
+.onboard-dot:hover::before { background: rgba(200, 168, 106, .6); }
+.onboard-dot[aria-current="step"]::before { width: 22px; background: var(--gold); }
+
+.onboard-actions { display: flex; gap: 12px; margin-top: 6px; }
+.onboard-actions .btn { flex: 0 0 auto; }
+.onboard-actions .btn-primary { flex: 1 1 auto; }
+
+/* Privacy line on the chart form: small, quiet, under the heading. */
+.form-privacy { margin: -4px 0 18px; font-size: 12.5px; }

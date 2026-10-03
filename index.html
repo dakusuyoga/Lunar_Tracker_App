@@ -122,6 +122,8 @@
           <button type="button" id="open-settings" class="menu-item" role="menuitem" data-dialog="settings-dialog" data-i18n="menu.location">Location</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-display" data-i18n="menu.display">Display</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-data" data-i18n="menu.data">Your data</button>
+          <hr class="rule">
+          <button type="button" class="menu-item" role="menuitem" data-action="show-onboarding" data-i18n="menu.howItWorks">How it works</button>
           <button type="button" class="menu-item" role="menuitem" data-dialog="dialog-about" data-i18n="menu.about">About</button>
           <hr class="rule">
           <button type="button" class="menu-item menu-item-quiet" role="menuitem" data-action="sign-out" data-i18n="menu.signOut">Sign out</button>
@@ -487,6 +489,58 @@
   </section>
 </div>
 
+<!-- ================================================ ONBOARDING -->
+<!-- Five-panel carousel: shown once after sign-up, and from the account menu
+     ("How it works"). Logic in src/onboarding.js. Panel copy is marked
+     data-i18n; the controls' labels are set by the script. -->
+<dialog id="onboarding" class="onboarding" aria-label="How Lunar Tracker works" data-i18n-aria="onboard.label">
+  <div class="glass onboard-card">
+    <div class="onboard-top">
+      <p class="wordmark small"><svg width="18" height="18" viewBox="-9 -9 18 18" aria-hidden="true"><path d="M 0 -7 A 7 7 0 0 0 0 7 A 3.1 7 0 0 1 0 -7"/></svg><span class="brand">Lunar Tracker</span></p>
+      <button type="button" class="link-btn onboard-skip" data-action="onboard-skip">Skip</button>
+    </div>
+    <div class="onboard-viewport">
+      <div class="onboard-track">
+        <section class="onboard-panel">
+          <svg class="onboard-icon" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4 A12 12 0 0 0 16 28 A5.3 12 0 0 1 16 4 Z"/></svg>
+          <h2 class="onboard-title" data-i18n="onboard.1.title">The moon, through your chart</h2>
+          <p class="onboard-body" data-i18n="onboard.1.body">Lunar Tracker follows the moon through its phases and signs, then reads each day against your own natal chart.</p>
+          <p class="onboard-note" data-i18n="onboard.1.note">One calm reading a day, shaped entirely around you.</p>
+        </section>
+        <section class="onboard-panel">
+          <svg class="onboard-icon" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><rect x="6" y="9" width="20" height="17" rx="3"/><path d="M10 5.5 H22"/><path d="M11 15.5 H21 M11 20.5 H17"/></svg>
+          <h2 class="onboard-title" data-i18n="onboard.2.title">Your day at a glance</h2>
+          <p class="onboard-body" data-i18n="onboard.2.body">Each day you&rsquo;ll see the moon&rsquo;s phase and sign, where it falls in your chart, and a reading written for that placement.</p>
+          <p class="onboard-note" data-i18n="onboard.2.note">Open any section to read the full guidance.</p>
+        </section>
+        <section class="onboard-panel">
+          <svg class="onboard-icon" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="7" width="22" height="20" rx="4"/><path d="M5 13 H27"/><path d="M11 4.5 V9.5 M21 4.5 V9.5"/><path d="M12 20.5 L15 23.5 L20.5 17.5"/></svg>
+          <h2 class="onboard-title" data-i18n="onboard.3.title">Check in, and look back</h2>
+          <p class="onboard-body" data-i18n="onboard.3.body">Note how you&rsquo;re feeling each day &mdash; mood, body, energy, focus, and a line or two of your own. Every check-in is saved.</p>
+          <p class="onboard-note" data-i18n="onboard.3.note">Revisit any past day from your history, whenever you like.</p>
+        </section>
+        <section class="onboard-panel">
+          <svg class="onboard-icon" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M16 9.5 V16 L20.5 19"/></svg>
+          <h2 class="onboard-title" data-i18n="onboard.4.title">Why your birth time matters</h2>
+          <p class="onboard-body" data-i18n="onboard.4.body">With a birth time, your chart gains houses, angles, and the affirmations tied to them. Without one, you&rsquo;ll still get full sign-based readings.</p>
+          <p class="onboard-note" data-i18n="onboard.4.note">Don&rsquo;t know your time? Leave it blank &mdash; you can add it anytime.</p>
+        </section>
+        <section class="onboard-panel">
+          <svg class="onboard-icon" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4.5"/><path d="M16 5 V11.5 M16 20.5 V27 M5 16 H11.5 M20.5 16 H27"/></svg>
+          <h2 class="onboard-title" data-i18n="onboard.5.title">Start with your birth details</h2>
+          <p class="onboard-body" data-i18n="onboard.5.body">Enter your birth date, time, and place once, and Lunar Tracker builds your personal chart. Everything else flows from it.</p>
+        </section>
+      </div>
+    </div>
+    <p class="onboard-dots" role="group" aria-label="Progress" data-i18n-aria="onboard.progress"></p>
+    <p class="visually-hidden onboard-status" aria-live="polite"></p>
+    <div class="onboard-actions">
+      <button type="button" class="btn btn-ghost" data-action="onboard-back" hidden>Back</button>
+      <button type="button" class="btn btn-primary" data-action="onboard-next">Next</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- ==================================================== YOUR CHART -->
 <dialog id="profile-dialog" class="dialog">
   <div id="dialog-chart" class="glass dialog-card">
@@ -508,6 +562,7 @@
     <form id="profile-form" class="form">
       <h2 id="profile-form-title" class="visually-hidden" data-i18n="chart.edit">Edit your chart</h2>
       <p id="pf-error" class="field-error" hidden data-i18n="chart.checkFields">Check the highlighted fields.</p>
+      <p class="helper form-privacy" data-i18n="chart.privacy">Your birth details stay private to your account.</p>
 
       <p class="field">
         <label for="pf-name" data-i18n="chart.name">Profile name</label>

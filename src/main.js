@@ -20,6 +20,7 @@ import { attachPlaceSearch, timezoneFor } from "./geocode.js";
 import { supabase, currentSession } from "./supabase.js";
 import { initAuth, signOut, refreshAuthCopy } from "./auth.js";
 import { showScreen, currentScreen } from "./screens.js";
+import { openOnboarding, closeOnboarding, hasSeenOnboarding, isOnboardingOpen } from "./onboarding.js";
 import {
   fetchProfileRow, rowToProfile, rowToLocation, saveProfileRow, saveDisplayLocation,
 } from "./profile.js";
@@ -651,6 +652,25 @@ let profileRow = null;
    October jumped to July. These wire the DOM once. */
 let listenersWired = false;
 
+/* Is this session the one sign-up itself produced, rather than a later
+   log-in? Supabase stamps `last_sign_in_at` on every password log-in, but
+   the session created by the confirmation link (or by sign-up directly,
+   when confirmation is off) is stamped at the same moment the account was
+   confirmed. So "signed in at the moment of confirmation" means sign-up,
+   and anything later is a log-in — a new device, a cleared browser — which
+   must not replay the carousel. Read from the session Supabase already
+   gave us, so the auth flow itself is untouched.
+
+   A missing timestamp reads as "not sign-up": never showing the carousel
+   is a smaller failure than showing it to a returning user. */
+const SIGN_UP_WINDOW_MS = 60 * 1000;
+function arrivedFromSignUp(user) {
+  const signedIn = Date.parse(user.last_sign_in_at);
+  const confirmed = Date.parse(user.email_confirmed_at || user.confirmed_at || user.created_at);
+  if (!Number.isFinite(signedIn) || !Number.isFinite(confirmed)) return false;
+  return Math.abs(signedIn - confirmed) <= SIGN_UP_WINDOW_MS;
+}
+
 /* Which screen a session implies: no session → login; session but no chart
    yet → first run; otherwise the daily view. */
 async function applySession(session) {
@@ -660,6 +680,7 @@ async function applySession(session) {
     profileRow = null;
     state.profiles = [];
     state.activeProfileId = null;
+    closeOnboarding();
     showScreen("screen-login");
     return;
   }
@@ -684,6 +705,17 @@ async function applySession(session) {
     state.profiles = [];
     state.activeProfileId = null;
     showScreen("screen-first-run");
+    /* Sign-up only: the carousel comes before the chart form, once.
+       applySession re-runs on every token refresh, so it must not reopen
+       over itself. Skipping or finishing lands on the chart form. */
+    if (arrivedFromSignUp(account) && !isOnboardingOpen()
+        && !hasSeenOnboarding(account.id)) {
+      openOnboarding({
+        mode: "first-run",
+        userId: account.id,
+        onFinish: () => openProfileForm(null),
+      });
+    }
     return;
   }
 
@@ -1255,6 +1287,18 @@ function wire() {
       if (done) ritualsDone.delete(ritual); else ritualsDone.add(ritual);
     }
   });
+
+  /* Reference, not an action: reopens the carousel. Its last button opens
+     the chart, since by now the person has one. */
+  document.querySelector('[data-action="show-onboarding"]')
+    ?.addEventListener("click", () => {
+      setMenu(false);
+      openOnboarding({
+        mode: "menu",
+        userId: account?.id,
+        onFinish: openChartDialog,
+      });
+    });
 
   document.querySelector('[data-action="sign-out"]')
     ?.addEventListener("click", async () => {
